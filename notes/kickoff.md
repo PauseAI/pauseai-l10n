@@ -2,6 +2,8 @@
 
 This project provides LLM-based localization (l10n) support for the pauseai-website project, maintaining a version-controlled cache of translations and the prompts that generated them.
 
+(This doc is a summary by Claude. this note is added by Anthony: I don't expect the suggested structure and naming conventions to persist. Consider the structure as an illustrative example.)
+ 
 ## Architecture
 
 The project serves as a:
@@ -14,13 +16,13 @@ The project serves as a:
 pauseai-l10n/
 ├── cache/
 │   ├── en-US/                    # Source content
-│   │   └── [content-hash].json   # Original content
-│   ├── es/                       # Spanish translations
-│   │   └── [content-hash].json   # Contains translations and metadata
+│   │   └── [content-hash].[human-clues].json   # Original content
+│   ├── es-ES/                       # Spanish translations
+│   │   └── [content-hash].[human-clues].json   # Contains translations and metadata
 │   └── ...                       # Other languages
 ├── prompts/
 │   ├── default.txt               # Base prompt template
-│   └── locale-variants/          # Optional locale-specific adjustments
+│   └── locale-variants/          # Optional locale-specific additions
 │       ├── es.txt
 │       └── de.txt
 ├── src/
@@ -83,8 +85,10 @@ pauseai-l10n/
 
 2. Prompt Engineering
    - Base prompt template
-   - Model-specific variants
-   - Locale-specific variants
+   - Page-specific additions
+   - Model-specific additions
+   - Locale-specific additions
+   - Some additions for particular combinations of those
    - Whole-page translation focus
 
 3. Build Integration
