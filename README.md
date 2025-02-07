@@ -4,7 +4,7 @@ LLM-based localization support for the pauseai-website project. This package mai
 
 ## Project Status
 
-Currently in early development. See [notes/pauseai-l10n-kickoff.md](notes/pauseai-l10n-kickoff.md) for design and architecture details.
+Currently in early development. See [notes/kickoff.md](notes/kickoff.md) for design and architecture details.
 
 ## Development Setup
 
