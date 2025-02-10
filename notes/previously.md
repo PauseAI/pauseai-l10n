@@ -150,13 +150,14 @@
 
 ## Implementation Plan
 
-1. Short Term
-   - Deploy prototype branch
+1. Short Term (on paraglide branch)
    - Add LLM request caching
    - Implement comparison UI
    - Test with native speakers
+   - Once verified, remove comparison and go forward with cached requests
+   - **fold paraglide into mainline at this point** modulo any "keep production stable" nuances
 
-2. Medium Term
+2. Medium Term (on pauseai-l10n)
    - Complete transition to new cache
    - Simplify markdown handling
    - Streamline validation
