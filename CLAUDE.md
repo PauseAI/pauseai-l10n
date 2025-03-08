@@ -173,6 +173,31 @@ The original raw chats get captured too, but I won't often want you to read them
 
 At the end of each session, I'll want you to help me produce those summaries for next time.
 
+
+## TypeScript/JavaScript Editing Best Practices
+
+  When editing TypeScript/JavaScript files, here in Claude code,
+  avoid indentation mismatches that can cause string replacement failures:
+
+  1. This codebase has typically used tab characters for indentation, not spaces
+  2. String replacements may fail if Claude normalizes tabs to spaces when storing content internally
+  3. For reliable editing of TypeScript files without wasted actions and token cost:
+     - Use the `Replace` tool instead of `Edit` for sufficiently substantial changes.
+     - Consider breaking complex edits into smaller chunks
+     - When using `Edit` for smaller changes, either do not require whitespace to match, 
+     -  or inspect the local whitespace using e.g. `cat -A`.
+
+  Examples:
+  ```bash
+  # Check exact file formatting including tabs (^I) and line endings
+  head -20 ./path/to/file.ts | cat -A
+
+  # Get exact text for string replacement at specific lines
+  sed -n '10,20p' ./path/to/file.ts
+
+  File indentation inconsistencies can cause edit failures even when the text content appears correct. Let's not introduce them!
+
+
 # Recent Progress
 
 ## 2025-03-02: Centralizing Localization Paths
