@@ -2,7 +2,7 @@
 
 This project concerns automatic localization of the PauseAI.info website (and later, possibly other text resources.)
 
-The website is written in SvelteKit, is mostly static, served from Netflify. (A little dynamic content is fetched from AirTable.)
+The website is wriitten in SvelteKit, is mostly static, served from Netflify. (A little dynamic content is fetched from AirTable.)
 
 Our key idea is that as of 2025 a mostly text website is best localized by LLMs.
 Manual edits to generated content are to be avoided outside of emergency operational actions.
@@ -12,12 +12,17 @@ A second idea is that the generated content is itself stored in a Git-managed ca
 - avoid unnecessary token cost: don't run the same l10n request against the same LLM twice.
 - for visibility: capture our exploration of l10n choices made throughout development
 
-This project `pauseai-l10n` is to become a dependency of the mainline pauseai-website. For now it contains mostly documentation.
+The top-level project `pauseai-l10n` is to become a dependency of the mainline pauseai-website.
+For now it contains mostly documentation. Don't look for code there!
 
-Related current work is visible under notes/references, where
+In this session we'll be making changes to code that lives down in notes/references/website-prototype,
+as detailed below. Change to that subdirectory if you need to find files or interact with Git: the top-level project usually confuses you.
+
+More generally the related current work is visible under notes/references, where
 - `website-prototype` contains a prototype `paraglide` branch of the GitHub `pauseai-website` repository.
 - `repos_paraglide` contains a first cut of the Git-managed cache. `pause-l10n` will absorb it and code to manage it.
 - `website-mainline` contains the production deployed `pauseai-website` repos, which will merge back the prototype branch soon.
+- the `monorepos` contains source code when you want to dig into the inlang and paraglide frameworks, since reading the node distribution chunks is a bit of a pain.
 
 Here is the prototype's l10n flow, which we hope to simplify by using better LLMs:
    - Git-based caching of translations, currently through OpenRouter + Llama 
@@ -139,14 +144,27 @@ Here is the prototype's l10n flow, which we hope to simplify by using better LLM
 
 ## Implementation Plan
 
-1. Short Term (on paraglide branch)
-   - Add LLM request caching
-   - Implement comparison UI
-   - Test with native speakers
-   - Once verified, remove comparison and go forward with cached requests
-   - **fold paraglide into mainline at this point** modulo any "keep production stable" nuances
+0. Fixes to make it reasonable to push and deploy to the prototype/paraglide branch:
+   - Mend anything broken about build targets in production - by running them on developer machine
+   - likewise support translation development on some developer machine
 
-2. Medium Term (on pauseai-l10n)
+1. Short Term (on paraglide branch)
+   - We can probably merge paraglide back onto main at this point, ending cost of maintaining the branch
+     - because, we can just use PARAGLIDE_LOCALES=en in CI/CD deployment to keep locales unlaunched 
+   - Create user-facing documentation explaining the l10n status:
+     - How users can help more locales become enabled
+     - How to report translation problems
+     - Explanation of our LLM usage for translations (ethical considerations)
+   - Validate some locales asap to realize value in production website
+     - Test with native speakers
+     - We may need better models for sufficiently good translations, if so suggest switch cache first
+     - Otherwise launch some locales in production!
+   - Supporting other models:
+     - switch to LLM request caching
+     - implement a comparison UI for dev/preview validation
+     - once verified, remove comparison(?) and go forward with cached requests
+
+2. Medium Term (take dependency on pauseai-l10n and move relevant code there)
    - Complete transition to new cache
    - Simplify markdown handling
    - Streamline validation
@@ -197,27 +215,7 @@ At the end of each session, I'll want you to help me produce those summaries for
 
   File indentation inconsistencies can cause edit failures even when the text content appears correct. Let's not introduce them!
 
-
-# Recent Progress
-
-## 2025-03-02: Centralizing Localization Paths
-- Created `/src/lib/l10n-paths.ts` to centralize localization path configuration
-- Added validation in vite.config.ts to prevent confusing errors when starting dev server
-- Identified opportunities to optimize build process performance:
-  - Reduce verbosity for unchanged translations
-  - Parallelize markdown processing 
-  - Address build warnings
-- These changes lay groundwork for implementation of the comparison UI and LLM request caching
-
-
-
 # General pauseai-l10n Development Guidelines - brewed by Claude on first run
-
-## Build & Test Commands
-- Build: `npm run build`
-- Test: `npm run test
-- Run single test: `npx jest path/to/test.ts`
-- Clean: `npm run clean`
 
 **Formatting:**
 - No semicolons; use tabs for indentation
@@ -231,6 +229,30 @@ At the end of each session, I'll want you to help me produce those summaries for
 **Imports:**
 - Use ES module syntax with esModuleInterop
 
-**File Organization:**
-- Source code in `src/`
-- Tests in `tests/` (excluded from build)
+
+# How you can be most helpful as a coding assistant
+
+The Composer Cursor view makes it easy for you to change files and suggest commands to run.
+
+Claude Code enables this further.
+
+But a typical antipattern is that you try to do too many things in one response.
+
+When we're trying to understand a problem or make the next
+implementation decision, please start by explaining what you think we
+should do at a high level, and where your assumptions are coming
+from. Then when we're making a sequence of changes to files, please do
+them mostly one at a time, since I usually have some feedback on each
+change.
+
+Experience with our current mutual capabilities is that you need me to
+stay in a tight conversational loop: it's too easy to go astray if you
+run ahead. We are a centaur. You know many details and usefully
+explain them to me. I course correct, based on your explanations and
+my own knowledge.
+
+This codebase is too big and complex to survive vibe coding. Although my
+development practices need updated in a context where AI assistance grants
+new superpowers, any time that together we introducing a lot of code or completely
+switching approaches to fix a minor or undiagnosed problem, that's a red flag.
+

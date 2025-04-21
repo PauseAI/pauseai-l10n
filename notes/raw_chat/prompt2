@@ -17,5 +17,5 @@ Another instance of you will be reading the first.
    - Record meta observations about the session
    - Track workflow evolution
 
-I already ran a shell script to handle chat extraction and file creation, and I've attached the raw text.
+I already ran a shell script to handle chat extraction and blank file creation: 
 Focus on organizing and summarizing the content of this chat effectively.
