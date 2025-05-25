@@ -4,11 +4,71 @@ This project concerns automatic localization of the PauseAI.info website (and la
 
 The website is written in SvelteKit, is mostly static, served from Netlify. (A little dynamic content is fetched from AirTable.)
 
+Do use LLM-targered documentation where appropriate. For example, at https://svelte.dev/docs/llms
+
 ## Current Status (April 28, 2025)
 - ✅ Full internationalization is now integrated into the main branch of pauseai-website
-- ✅ The paraglide prototype has been squashed and merged 
+- ✅ The paraglide prototype has been squashed and merged
 - ✅ Website builds with English-only by default for development convenience
 - 🔄 Non-English locales will be enabled once remaining issues are resolved
+
+## INVESTIGATION COMPLETE: Edge Function 500 Errors (May 25, 2025)
+
+### Problem Statement
+**Source: User reports**
+- Code changes cause 500 Internal Server Error responses for non-prerendered routes
+- Issue occurs consistently in both production and local `netlify serve`
+- Origin/main branch works correctly in production, including edge function routes like `/api/calendar`
+
+### Key Finding: Configuration Dependency
+**What works vs what fails:**
+- ✅ `edge: false, split: true` (individual Node.js serverless functions) - ALL routes work perfectly
+- ❌ `edge: true, split: false` (single 3MB edge function) - ALL non-prerendered routes return 500
+
+**Important:** Cannot test `edge: true, split: true` because Netlify doesn't allow this combination.
+
+### Root Cause: Unknown but Isolated
+**What we DON'T know:** Whether the issue is:
+- Edge functions vs Node.js functions (runtime difference)
+- Single large function vs multiple small functions (architectural difference)  
+- Size/complexity limits in edge functions
+- Deno vs Node.js compatibility issues
+
+**What we DO know:** The single edge function configuration fails completely while split Node.js functions work perfectly.
+
+### Investigation Methodology Notes
+**For future Claude instances:**
+1. **Read appropriate docs first** - Use https://svelte.dev/docs/kit/llms-small.txt for context-limited situations
+2. **Don't overstate conclusions** - Stick to what's actually proven vs hypotheses
+3. **Test minimal cases** - Created simple API endpoints to isolate from route complexity
+4. **Understand prerendering** - Routes get prerendered when called by prerenderable pages (crawling behavior)
+5. **Check edge function scripts** - `scripts/exclude-from-edge-function.ts` and `scripts/opt-in-to-caching.ts` fail when `edge: false`
+
+### Workaround Applied
+- **Temporary:** `edge: false, split: true` for debugging
+- **Disabled:** Edge function postbuild scripts (`exclude-from-edge-function.ts`, `opt-in-to-caching.ts`)
+- **Status:** All API routes functional, locale redirects working (with some browser vs curl differences)
+
+### Next Steps for Resolution
+1. **Determine if edge functions are required** for production performance
+2. **If needed:** Investigate specific edge function failure modes
+3. **Consider:** Manual exclusion patterns like `/pagefind/*` for problematic routes
+**Source: WebSearch of Netlify support forums and GitHub issues**
+- Documented issues with Netlify CLI edge functions and Deno v1.45.0+
+- "TypeScript files are not supported in npm packages" compilation errors
+- Syntax errors during edge function bundling can cause 500 responses
+- Node.js vs Deno API compatibility issues affect edge function execution
+
+### Timeline Clarification
+**Source: User correction**
+- 500 error issue predates debugging attempts
+- simple-git removal, paraglide changes, and isDryRun hardcoding were attempts to fix pre-existing 500 issue
+- Root cause change has not yet been identified
+
+### Next Investigation Step
+**Source: Conversation conclusion**
+- Need to test whether issue affects only the "render" edge function or all edge functions
+- This will determine if problem is render-specific or runtime-wide
 
 Our key idea is that as of 2025 a mostly text website is best localized by LLMs.
 Manual edits to generated content are to be avoided outside of emergency operational actions.
@@ -26,9 +86,9 @@ but that work has now been merged to main. The website-prototype directory is ke
 reference but is no longer actively developed.
 
 More generally the related current work is visible under notes/references, where
-- `website-mainline` contains the production deployed `pauseai-website` repository, which now includes all paraglide localization code.
+- `pauseai-website` contains the production deployed `pauseai-website` repository, which now includes all paraglide localization code.
 - `repos_paraglide` contains a first cut of the Git-managed cache. `pause-l10n` will absorb it and code to manage it.
-- The inactive `website-prototype` contains the historical prototype `paraglide` branch that was merged to main.
+- Inactive `hide-website-prototype*` and `hide-website-mainline*` directories contain legacy versions of code that you should ignore.
 - The `monorepos` contains source code when you want to dig into the inlang and paraglide frameworks, since reading the node distribution chunks is a bit of a pain.
 
 The current implementation's l10n flow (now in the main branch):
@@ -106,6 +166,7 @@ I suggest reading pnpm targets at the top of packages.json, and the default-sett
    - 🔄 Fix remaining issues before enabling non-English locales:
      - Isolate cache repositories by branch (prevent dev/preview from writing to production cache)
      - Resolve geo location detection failures
+     - Fix Markdown link localization to correctly prefix paths with language codes
      - Localize non-static resources that still only show English content:
        - Search results
        - All pages list
@@ -131,6 +192,7 @@ I suggest reading pnpm targets at the top of packages.json, and the default-sett
    - Simplify markdown handling
    - Streamline validation
    - Document new architecture
+   - Improve markdown link localization to handle absolute paths in markdown content
 
 3. Long Term
    - Optimize model selection
