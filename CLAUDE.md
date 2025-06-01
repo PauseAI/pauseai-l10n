@@ -6,70 +6,6 @@ The website is written in SvelteKit, is mostly static, served from Netlify. (A l
 
 Do use LLM-targered documentation where appropriate. For example, at https://svelte.dev/docs/llms
 
-## Current Status (April 28, 2025)
-- ✅ Full internationalization is now integrated into the main branch of pauseai-website
-- ✅ The paraglide prototype has been squashed and merged
-- ✅ Website builds with English-only by default for development convenience
-- 🔄 Non-English locales will be enabled once remaining issues are resolved
-
-## INVESTIGATION COMPLETE: Edge Function 500 Errors (May 25, 2025)
-
-### Problem Statement
-**Source: User reports**
-- Code changes cause 500 Internal Server Error responses for non-prerendered routes
-- Issue occurs consistently in both production and local `netlify serve`
-- Origin/main branch works correctly in production, including edge function routes like `/api/calendar`
-
-### Key Finding: Configuration Dependency
-**What works vs what fails:**
-- ✅ `edge: false, split: true` (individual Node.js serverless functions) - ALL routes work perfectly
-- ❌ `edge: true, split: false` (single 3MB edge function) - ALL non-prerendered routes return 500
-
-**Important:** Cannot test `edge: true, split: true` because Netlify doesn't allow this combination.
-
-### Root Cause: Unknown but Isolated
-**What we DON'T know:** Whether the issue is:
-- Edge functions vs Node.js functions (runtime difference)
-- Single large function vs multiple small functions (architectural difference)  
-- Size/complexity limits in edge functions
-- Deno vs Node.js compatibility issues
-
-**What we DO know:** The single edge function configuration fails completely while split Node.js functions work perfectly.
-
-### Investigation Methodology Notes
-**For future Claude instances:**
-1. **Read appropriate docs first** - Use https://svelte.dev/docs/kit/llms-small.txt for context-limited situations
-2. **Don't overstate conclusions** - Stick to what's actually proven vs hypotheses
-3. **Test minimal cases** - Created simple API endpoints to isolate from route complexity
-4. **Understand prerendering** - Routes get prerendered when called by prerenderable pages (crawling behavior)
-5. **Check edge function scripts** - `scripts/exclude-from-edge-function.ts` and `scripts/opt-in-to-caching.ts` fail when `edge: false`
-
-### Workaround Applied
-- **Temporary:** `edge: false, split: true` for debugging
-- **Disabled:** Edge function postbuild scripts (`exclude-from-edge-function.ts`, `opt-in-to-caching.ts`)
-- **Status:** All API routes functional, locale redirects working (with some browser vs curl differences)
-
-### Next Steps for Resolution
-1. **Determine if edge functions are required** for production performance
-2. **If needed:** Investigate specific edge function failure modes
-3. **Consider:** Manual exclusion patterns like `/pagefind/*` for problematic routes
-**Source: WebSearch of Netlify support forums and GitHub issues**
-- Documented issues with Netlify CLI edge functions and Deno v1.45.0+
-- "TypeScript files are not supported in npm packages" compilation errors
-- Syntax errors during edge function bundling can cause 500 responses
-- Node.js vs Deno API compatibility issues affect edge function execution
-
-### Timeline Clarification
-**Source: User correction**
-- 500 error issue predates debugging attempts
-- simple-git removal, paraglide changes, and isDryRun hardcoding were attempts to fix pre-existing 500 issue
-- Root cause change has not yet been identified
-
-### Next Investigation Step
-**Source: Conversation conclusion**
-- Need to test whether issue affects only the "render" edge function or all edge functions
-- This will determine if problem is render-specific or runtime-wide
-
 Our key idea is that as of 2025 a mostly text website is best localized by LLMs.
 Manual edits to generated content are to be avoided outside of emergency operational actions.
 Instead, we "edit" content by adding to the prompt(s) that generate that localized content.
@@ -80,6 +16,10 @@ A second idea is that the generated content is itself stored in a Git-managed ca
 
 The top-level project `pauseai-l10n` is to become a dependency of the mainline pauseai-website.
 For now it contains mostly documentation. Don't look for code there!
+
+**IMPORTANT DIRECTORY STRUCTURE**: The actual pauseai-website codebase is located at:
+`/home/anthony/repos/pauseai-l10n/notes/references/pauseai-website/`
+NOT in the top-level pauseai-l10n directory. Always use the full path or cd to this subdirectory when working with website code.
 
 Previously we were making changes to code that lived in notes/references/website-prototype,
 but that work has now been merged to main. The website-prototype directory is kept for historical 
@@ -100,9 +40,55 @@ The current implementation's l10n flow (now in the main branch):
    
 Key components in the main branch implementation:
    - Environment-based configuration with PARAGLIDE_LOCALES env var
+    - is en in production website until we launch some localizations
+    - we can preview a production website with localization launched on branch l10-preview.
    - Language switching UI with auto-detection in the header
    - Default English-only mode for developer convenience
    - Prerendering of all locale paths for static site generation
+
+We have been trying to switch to having all localizations, including en, being rendered under locale-prefixed route,
+ with unlocalized routes always redirecting to a localized route.
+
+We ran into 500 errors in edge functions while implementing that.
+
+### Problem Statement
+**Source: User reports**
+- Code changes (implementing en prefix) cause 500 Internal Server Error responses for non-prerendered routes
+- Issue occurs consistently in both production and local `netlify serve`
+- Origin/main branch works correctly in production, including edge function routes like `/api/calendar`
+- 500 error issue predate various debugging attempts (suppressed simple-git and js-render, moving from edge functions)
+
+**What works vs what fails:**
+- ✅ `edge: false (individual Node.js serverless render function or split functions) - promising in development
+- ❌ `edge: true` (single 3MB edge render function) - ALL non-prerendered routes return 500
+ - cannot test `edge: true, split: true` because Netlify doesn't allow this combination.
+
+### Workaround Applied
+- **Disabled:** Edge function postbuild scripts (`exclude-from-edge-function.ts`, `opt-in-to-caching.ts`)
+- **Status:** All API routes functional, locale redirects working (with some browser vs curl differences)
+
+### Root Cause: Unknown but Isolated
+**What we DON'T know:** Whether the issue is:
+- Single large function vs multiple small functions (architectural difference / function size)  
+- Deno vs Node.js compatibility issues
+
+### Investigation Methodology Notes
+**For future Claude instances:**
+1. **Read appropriate docs first** - Use https://svelte.dev/docs/kit/llms-small.txt for context-limited situations
+2. **Don't overstate conclusions** - Stick to what's actually proven vs hypotheses
+3. **Test minimal cases** - Created simple API endpoints to isolate from route complexity
+4. **Understand prerendering** - Routes get prerendered when called by prerenderable pages (crawling behavior)
+5. **Check edge function scripts** - `scripts/exclude-from-edge-function.ts` and `scripts/opt-in-to-caching.ts` fail when `edge: false`
+
+### Next Steps for Resolution
+1. **Determine if edge functions are required** for production performance
+2. **If needed:** Investigate specific edge function failure modes
+3. **Consider:** Manual exclusion patterns like `/pagefind/*` for problematic routes
+**Source: WebSearch of Netlify support forums and GitHub issues**
+- Documented issues with Netlify CLI edge functions and Deno v1.45.0+
+- "TypeScript files are not supported in npm packages" compilation errors
+- Syntax errors during edge function bundling can cause 500 responses
+- Node.js vs Deno API compatibility issues affect edge function execution
 
 
 # General pauseai-l10n Development Guidelines - brewed by Claude on first run
@@ -157,16 +143,10 @@ I suggest reading pnpm targets at the top of packages.json, and the default-sett
    - ✅ Mend anything broken about build targets in production - by running them on developer machine
    - ✅ Support translation development on some developer machine
 
-1. ✅ Merged paraglide to main with safety controls (April 28, 2025)
-   - ✅ Ready to merge paraglide back onto main, ending cost of maintaining the branch
-     - ✅ Will use PARAGLIDE_LOCALES=en in CI/CD deployment to keep locales unlaunched
-   - ✅ Successfully squashed 95 commits from paraglide branch into a single comprehensive commit on main
-     - ✅ Detailed commit message documenting five key development phases
-     - ✅ Original paraglide branch preserved for historical reference
+1. Current state: Using PARAGLIDE_LOCALES=en in CI/CD deployment to keep locales unlaunched
    - 🔄 Fix remaining issues before enabling non-English locales:
      - Isolate cache repositories by branch (prevent dev/preview from writing to production cache)
      - Resolve geo location detection failures
-     - Fix Markdown link localization to correctly prefix paths with language codes
      - Localize non-static resources that still only show English content:
        - Search results
        - All pages list
@@ -192,13 +172,61 @@ I suggest reading pnpm targets at the top of packages.json, and the default-sett
    - Simplify markdown handling
    - Streamline validation
    - Document new architecture
-   - Improve markdown link localization to handle absolute paths in markdown content
 
 3. Long Term
    - Optimize model selection
    - Enhance prompt engineering
    - Scale to more languages
    - Consider community feedback system
+
+
+## LINK LOCALIZATION IMPLEMENTATION (January 26, 2025)
+
+### Problem Statement
+Localized pages (e.g., `/de/faq`, `/nl/proposal`) contain unlocalized internal links (e.g., `/proposal`, `/learn`) that should be localized to match the page's locale (e.g., `/de/proposal`, `/nl/learn`).
+
+### Current State (Baseline Metrics)
+**Initial Audit Results** (via `scripts/audit-unlocalized-links.ts`):
+- **🚨 3,644 unlocalized links FROM localized pages** - require fixing
+- **✅ 1,135 unlocalized links FROM unlocalized pages** - expected behavior
+- **Top offenders**: `/proposal` (349×), `/xrisk` (321×), `/communities` (300×), `/action` (299×), `/join` (296×)
+- **Impact**: 356 HTML files + 152 JS chunks affected
+
+### First Round of Solution Implementated
+**File**: `src/lib/components/custom/a.svelte`  
+**Method**: Use existing `localizeHref()` function from `$lib/paraglide/runtime`
+
+**Implementation Plan**:
+1. ✅ Modify custom `a` component to automatically localize internal absolute links (`/foo` → `/de/foo`)
+2. ✅ Use `localizeHref()` which correctly handles language switchers (prevents double-prefixing)
+4. ✅ Re-run audit to track progress (target: reduce 3,644 → near 0)
+5. ✅ Switched footer to use Link
+ 
+**Infrastructure Ready**:
+- ✅ Paraglide `localizeHref()` function handles all edge cases
+- ✅ Custom `a` component already used throughout markdown via mdsvex
+- ✅ Audit tooling implemented and tested for progress tracking
+- ✅ Affects both prerendered HTML and JS chunks automatically
+
+See `/home/anthony/repos/pauseai-l10n/LINK_LOCALIZATION_PLAN.4.md` for complete technical details.
+
+
+## ONGOING: L10n Workflow Simplification (June 1, 2025)
+
+### Current Work
+We are simplifying the translation workflow by moving from a complex flag-based system to branch-based isolation:
+- **Completed**: Terminology updates (translate → l10n), smart postbuild guards, routing strategy fixes
+- **In Progress**: Branch-based safety for translation repos
+- **Pending**: Remove old flags, update translation scripts
+
+### Key Documents
+- **Plan**: `/home/anthony/repos/pauseai-l10n/L10N_BRANCH_SAFETY_PLAN.md` - Full implementation plan with rationale
+- **Session Summary**: `/home/anthony/repos/pauseai-l10n/notes/summary/20250601T00.l10n_workflow_simplification.summary.md`
+
+### Important Notes
+- Commit `c55769b` on l10-preview branch contains postbuild improvements ready for main
+- Translation scripts (`scripts/translation/*`) still need updates - they use old terminology and would break production
+- The hardcoded `LOCAL_TESTING_BRANCH` in git-ops.ts needs to be replaced with dynamic branch detection
 
 
 # Maintaining documentation
