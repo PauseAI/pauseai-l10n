@@ -80,6 +80,12 @@ We ran into 500 errors in edge functions while implementing that.
 4. **Understand prerendering** - Routes get prerendered when called by prerenderable pages (crawling behavior)
 5. **Check edge function scripts** - `scripts/exclude-from-edge-function.ts` and `scripts/opt-in-to-caching.ts` fail when `edge: false`
 
+### Server-Side Locale Management
+**Note:** The `setLocale` call in `src/routes/+layout.ts` (lines 23-25) appears redundant and should be removed:
+- The `paraglideMiddleware` in `hooks.server.ts` already handles locale detection and sets it via AsyncLocalStorage
+- The +layout.ts runs after middleware, so its setLocale call likely has no effect (or worse, could interfere with edge function locale state)
+- The middleware uses proper server-side context isolation; the +layout.ts approach risks state pollution
+
 ### Next Steps for Resolution
 1. **Determine if edge functions are required** for production performance
 2. **If needed:** Investigate specific edge function failure modes
@@ -146,7 +152,6 @@ I suggest reading pnpm targets at the top of packages.json, and the default-sett
 1. Current state: Using PARAGLIDE_LOCALES=en in CI/CD deployment to keep locales unlaunched
    - 🔄 Fix remaining issues before enabling non-English locales:
      - Isolate cache repositories by branch (prevent dev/preview from writing to production cache)
-     - Resolve geo location detection failures
      - Localize non-static resources that still only show English content:
        - Search results
        - All pages list
@@ -211,23 +216,143 @@ Localized pages (e.g., `/de/faq`, `/nl/proposal`) contain unlocalized internal l
 See `/home/anthony/repos/pauseai-l10n/LINK_LOCALIZATION_PLAN.4.md` for complete technical details.
 
 
-## ONGOING: L10n Workflow Simplification (June 1, 2025)
+## L10n Workflow - Branch Safety & Mode System (Updated January 2025)
 
-### Current Work
-We are simplifying the translation workflow by moving from a complex flag-based system to branch-based isolation:
-- **Completed**: Terminology updates (translate → l10n), smart postbuild guards, routing strategy fixes
-- **In Progress**: Branch-based safety for translation repos
-- **Pending**: Remove old flags, update translation scripts
+### Current Implementation
+We have a clean branch-based safety system with comprehensive mode determination:
+
+#### 1. Mode System
+The `Mode` class determines operation mode based on three "breeds" (`L10nBreed`):
+- **en-only**: No translation needed (single locale configured)
+- **dry-run**: Read cache only, no LLM calls (missing/invalid API key OR --dry-run flag)
+- **perform**: Full translation with LLM calls and cache writes
+
+The mode provides:
+- Clear announcement via `mode.announce()`
+- Centralized CI detection via `mode.isCI`
+- Branch information and safety validation
+- Comprehensive unit tests
+
+#### 2. Branch-Based Safety
+- Dynamic branch detection: checks `L10N_BRANCH` env → CI variables → current Git branch
+- **Main branch protection**: Local development cannot write to main branch
+- **CI exception**: CI/CD environments can write to main for production deploys
+- Automatic branch creation and upstream tracking in Git operations
+
+#### 3. L10n Terminology Migration ✅
+- **Environment variables**: Now use `L10N_OPENROUTER_API_KEY` and `L10N_BRANCH`
+- **Cache location**: Moved to `l10n-cage` (CAGE = Cache As Git Environment)
+- **Core files renamed**: `run.ts` (main), `heart.ts` (processing logic)
+- **Git username**: `L10nKeeper` manages the lion cage
+- **Module organization**: Branch safety functions extracted to dedicated module
+- **Function naming**: Clear distinction between website and cage operations
 
 ### Key Documents
-- **Plan**: `/home/anthony/repos/pauseai-l10n/L10N_BRANCH_SAFETY_PLAN.md` - Full implementation plan with rationale
-- **Session Summary**: `/home/anthony/repos/pauseai-l10n/notes/summary/20250601T00.l10n_workflow_simplification.summary.md`
+- **Current Plan**: `/home/anthony/repos/pauseai-l10n/L10N_BRANCH_SAFETY_PLAN_v2.md` - Updated plan with completed work and next steps
+- **Original Plan**: `/home/anthony/repos/pauseai-l10n/L10N_BRANCH_SAFETY_PLAN.md` - Historical reference
+- **Session Summary**: `/home/anthony/repos/pauseai-l10n/notes/summary/20250602T00.branch_safety_and_mode_system.summary.md`
+- **Debug Plan**: `/home/anthony/repos/pauseai-l10n/PREFIX_ALL_LOCALES_DEBUG_PLAN.md` - Systematic approach to diagnose prefix-all-locales 500 errors
 
-### Important Notes
-- Commit `c55769b` on l10-preview branch contains postbuild improvements ready for main
-- Translation scripts (`scripts/translation/*`) still need updates - they use old terminology and would break production
-- The hardcoded `LOCAL_TESTING_BRANCH` in git-ops.ts needs to be replaced with dynamic branch detection
+### Usage Examples
+```bash
+# Dry-run mode (no API key or invalid key)
+TRANSLATION_OPENROUTER_API_KEY="short" pnpm l10n
 
+# Explicit dry-run with valid API key
+pnpm l10n --dry-run
+
+# Verbose dry-run to see file details
+pnpm l10n --dry-run --verbose
+
+# Force retranslation of specific files (currently hardcoded list)
+pnpm l10n --force
+
+# Normal translation (requires valid API key and non-main branch)
+pnpm l10n
+```
+
+### Known Issues ✅ (Resolved)
+- ✅ **en.json symlink error**: Fixed in clean script
+- ✅ **Upstream tracking**: Automatic upstream setup implemented
+- ✅ **pnpm targets**: Simplified to use CLI flags instead of multiple scripts
+- ✅ **Module organization**: Branch safety functions extracted to dedicated module
+
+
+# Current Investigation Status (January 2025)
+
+**CONTEXT**: We have been working on pauseai-website branches originally created to explore consistently using locale prefixes (for en as well as existing locales). This uncovered 500 errors in edge functions. The investigation was paused to complete essential l10n infrastructure work.
+
+**MAJOR PROGRESS COMPLETED**:
+✅ Link localization implementation (custom `a.svelte` component)  
+✅ Branch safety & mode system implementation  
+✅ L10n terminology migration (`translation` → `l10n`, `cage` terminology)  
+✅ Force mode with glob pattern support  
+✅ Critical security fix: CI no longer silently dry-runs with invalid API keys  
+✅ Comprehensive testing suite (branch safety, mode, force functionality)  
+✅ Fixed runtime errors in l10n pipeline (`params.locateTarget` interface)  
+✅ Git tracking and authentication fixes (SSH auto-switch, upstream setup)
+✅ Bootstrap and path alignment fixes (auto-regenerate settings, l10n-cage paths)
+✅ Clean safety improvements (en.json symlink handling)
+✅ **Atomic commit implementation**: Clean modular architecture with 3 atomic commits
+✅ **Module organization**: Branch safety functions extracted to dedicated module
+✅ **Function renaming**: Clear distinction between website and cage operations
+✅ **Test infrastructure**: All tests converted to vitest with comprehensive coverage
+
+**CURRENT STATUS**: L10n infrastructure COMPLETE and ready for review
+- ✅ End-to-end l10n workflow verified and tested
+- ✅ Clean atomic commits in PR #366 (marked ready for review)
+- ✅ All technical debt resolved (no duplicated functions, clear module boundaries)
+- ✅ Comprehensive test suite with 46 passing tests across 4 test files
+- ✅ Git operations handle new branches with automatic upstream setup
+- ✅ Authentication works seamlessly (SSH auto-switch)
+- ✅ Comprehensive l10n developer documentation written
+- ✅ **Production preview**: Infrastructure verified working with edge functions enabled
+
+**CURRENT CONFIGURATION** (PR #366):
+- **Routing strategy**: Standard prefix (no en-prefix) - working correctly
+- **Edge functions**: `edge: true` - functioning properly with current codebase
+- **Locales**: English-only in production (`PARAGLIDE_LOCALES=en`)
+- **Link localization**: Active and working via custom `a.svelte` component
+
+**CURRENT STATUS** (Updated 2025-06-16):
+- ✅ **PR #366**: L10n infrastructure complete, TypeScript CI issues resolved, ready for merge
+- 🔄 **Awaiting review**: Documentation and code ready, allowing time for reviewer feedback
+- ✅ **500 Error Investigation COMPLETE**: Root cause identified in PR #325
+  - **Issue**: Both edge functions AND serverless functions fail with `prefix-all-locales` strategy
+  - **Investigation branch**: `investigate/500s` with minimal reproduction case
+  - **Documentation**: `/notes/summary/20250616T14.edge_vs_serverless_500_investigation.summary.md`
+  - **Conclusion**: Adapter prerender filtering approach is fundamentally incompatible with Netlify functions
+- 📋 **Next priorities**: Implement proper `prefix-all-locales` solution, then launch additional locales
+
+**LATER REFINEMENTS** (not blocking):
+- Mode factory pattern for better testing
+- Branch maintenance strategy for old PR branches
+
+## Quick Start for New Claude Instances
+
+**WORKING DIRECTORY**: Always work in `/home/anthony/repos/pauseai-l10n/notes/references/pauseai-website/`
+
+**VERIFY CURRENT STATE**:
+```bash
+cd /home/anthony/repos/pauseai-l10n/notes/references/pauseai-website/
+git log --oneline -3  # Should show 3 recent atomic commits
+pnpm test run         # Should show 46 passing tests
+pnpm l10n --dry-run   # Should work without errors
+```
+
+**KEY NEW FILES TO UNDERSTAND**:
+- `scripts/l10n/branch-safety.ts` - Branch detection and safety validation
+- `scripts/l10n/mode.ts` - L10n mode system (en-only/dry-run/perform)  
+- `scripts/l10n/force.ts` - Force mode with glob patterns
+- `scripts/l10n/heart.ts` - Core l10n processing logic
+- `scripts/l10n/run.ts` - Main entry point
+
+**IMMEDIATE TASKS**:
+1. Write comprehensive l10n developer documentation
+2. Prepare atomic commits for merge to main
+3. Return to en-prefix/500 error investigation
+
+**📖 DETAILED CONTEXT**: Read `/home/anthony/repos/pauseai-l10n/L10N_BRANCH_SAFETY_PLAN_v2.md` for complete implementation details.
 
 # Maintaining documentation
 
