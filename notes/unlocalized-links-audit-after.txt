@@ -1,0 +1,85 @@
+🔍 Scanning prerendered HTML files...
+🔍 Scanning JavaScript chunks...
+
+📊 UNLOCALIZED LINK AUDIT REPORT
+================================
+
+📈 Summary:
+   • HTML files with unlocalized links: 356
+   • JS chunks with unlocalized links: 153
+   • Total unlocalized links found: 4709
+
+🎯 Key metrics (the real problems):
+   • 🚨 Links from LOCALIZED pages: 3593 (need fixing)
+   • ✅ Links from unlocalized pages: 1116 (expected)
+   • 📊 Files with localized sources: 417
+   • 📊 Files with unlocalized sources: 92
+
+🔗 Most common unlocalized links FROM LOCALIZED PAGES (problems):
+   350× /proposal
+   321× /xrisk
+   300× /action
+   300× /communities
+   296× /join
+   293× /risks
+   288× /people
+   282× /teams
+   282× /events
+   276× /learn
+
+📁 Sample LOCALIZED pages with unlocalized links (the real problems):
+   🚨 HTML: de/2023-august-nl.html
+      → /join
+      → /faq
+      → /proposal
+      ... and 9 more
+   🚨 HTML: de/2023-july-london-13th.html
+      → /join
+      → /faq
+      → /proposal
+      ... and 9 more
+   🚨 HTML: de/2023-july-london-18th.html
+      → /join
+      → /faq
+      → /proposal
+      ... and 9 more
+   🚨 HTML: de/2023-july-nyc.html
+      → /join
+      → /faq
+      → /proposal
+      ... and 9 more
+   🚨 HTML: de/2023-june-london-office-for-ai.html
+      → /join
+      → /faq
+      → /proposal
+      ... and 9 more
+   🚨 HTML: de/2023-june-london.html
+      → /join
+      → /faq
+      → /proposal
+      ... and 9 more
+   🚨 HTML: de/2023-june-melbourne.html
+      → /join
+      → /faq
+      → /proposal
+      ... and 9 more
+   🚨 HTML: de/2023-may-deepmind-london.html
+      → /join
+      → /faq
+      → /proposal
+      ... and 9 more
+
+📁 Sample UNLOCALIZED pages with unlocalized links (expected):
+   ✅ HTML: 2023-august-nl.html
+      → /join
+      → /faq
+   ✅ HTML: 2023-july-london-13th.html
+      → /join
+      → /faq
+   ✅ HTML: 2023-july-london-18th.html
+      → /join
+      → /faq
+
+💡 Run this script again after implementing link localization to track progress!
+
+📄 Detailed results written to: unlocalized-links-audit.json

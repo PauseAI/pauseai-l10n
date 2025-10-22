@@ -1,0 +1,21 @@
+Thanks for all your help.
+
+I'd like to end this session.
+Remember how we started?
+Please help create two summaries of our session.
+Another instance of you will be reading the first.
+
+1. Technical Summary (notes/summary/[timestamp].[chatname].summary.md):
+   - Focus on concrete decisions and outcomes
+   - Separate exploration/rationale from conclusions
+   - Document status and next steps
+   - Keep implementation details precise
+
+2. Personal Notes (notes/personal/[timestamp].[chatname].personal.md):
+   - Capture learning journey and insights
+   - Note process improvements and tool interactions
+   - Record meta observations about the session
+   - Track workflow evolution
+
+I already ran a shell script to handle chat extraction and blank file creation: 
+Focus on organizing and summarizing the content of this chat effectively.
