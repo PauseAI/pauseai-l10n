@@ -1,9 +1,0 @@
-This is a long-running project.
-
-All previous chat sessions have been summarized for fellow human developers and AI coding helpers like yourself, focusing on decisions and current status.
-These are in notes/summary/YYYYMMDDTHH.*.md and I've attached the most recent one.
-
-The original raw chats get captured too, but I won't often want you to read them. In them I will make asides, tell you how I'm doing, go off into the weeds in the meta of using Cursor, learn brand new things everyone else already knows. We don't want to waste space on that content within summaries, but I do want to keep highlights in personal summaries not meant for others to read in parallel notes/personal/YYYYMMDDTHH.*.personal.md
-At the end of a session, I'll want you to help me produce those summaries for next time.
-
-Please read CLAUDE.md and the session summary attached.
