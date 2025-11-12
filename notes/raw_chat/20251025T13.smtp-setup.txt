@@ -1,0 +1,1280 @@
+ ▐▛███▜▌   Claude Code v2.0.27
+▝▜█████▛▘  Sonnet 4.5 (1M context) · Claude Max
+  ▘▘ ▝▝    /home/anthony/repos/pauseai-l10n/notes/references/pauseai-collagen
+
+> Greetings 
+
+● Hello! Let me start by reading the project CLAUDE.md to understand where we are.
+
+  I can see from the context that this is Collagen, an automated collage pipeline for campaign photos, currently driving the "Say No" campaign. Let
+  me summarize the current status:
+
+  Where We Are
+
+  Phase: Phase 3 infrastructure complete, ready for email template + send script
+  Branch: mainProduction Build: 20251024T230728Z,266=19x14 (266 images, 281 tiles available)
+  Tracking Infrastructure: Deployed and operational at collagen.pauseai.info
+
+  Just Completed (Phase 3)
+
+  You've successfully built out the complete tracking infrastructure:
+  - SQLite tracking database (users + collages tables) with UID generation
+  - S3 bucket for collage images (pauseai-collagen)
+  - SQS queue + Lambda + API Gateway at collagen.pauseai.info
+  - EC2 tracking worker running as systemd service
+  - Custom domain with ACM cert + DNS
+  - End-to-end testing validated with real collage data
+
+  Next Immediate Steps (Phase 3 Continuation)
+
+  - Email template design (HTML + plain text with tracking URLs)
+  - Email send script with dry-run mode
+  - pauseai-website updates (banner detection on /sayno and /join)
+  - Allowlist testing with pauseai.info addresses
+  - Production rollout in phases
+
+  Now let me check the Node version and show you the starting environment:
+
+● Bash(export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh" && nvm use 2>&1 || echo "No .nvmrc file found")
+  ⎿  No .nvmrc file found                                                                
+     Please see `nvm --help` or https://github.com/nvm-sh/nvm#nvmrc for more information.
+     No .nvmrc file found
+
+● Bash(pwd && git branch --show-current && git status --short && python3 --version && which python3)
+  ⎿  /home/anthony/repos/pauseai-l10n/notes/references/pauseai-collagen
+     main
+     Python 3.10.12
+     /home/anthony/.pyenv/shims/python3
+
+● Starting Environment
+
+  Working Directory: /home/anthony/repos/pauseai-l10n/notes/references/pauseai-collagen
+  Branch: main
+  Status: Clean (no uncommitted changes)
+  Python: 3.10.12 (via pyenv)
+  Node: N/A (no .nvmrc file)
+
+  You're in great shape with Phase 3 tracking infrastructure deployed and tested. Ready to move forward with email templates and send scripts
+  whenever you are!
+
+> I guess our first technical challenge is establishing we can send mail from a pauseai.info Google workspace account. Let's plan how to set that up 
+and test it. 
+
+● Good plan! Let's establish email sending capability. Based on the CLAUDE.md, the tech stack mentions "Google Workspace SMTP: Email delivery
+  (sayno@pauseai.info)" so this is already planned.
+
+  Google Workspace SMTP Setup Plan
+
+  Here's what we need to configure:
+
+  1. SMTP Configuration Details
+
+  For Google Workspace accounts, the standard SMTP settings are:
+  - Server: smtp.gmail.com
+  - Port: 587 (TLS) or 465 (SSL)
+  - Authentication: App Password (not regular password - 2FA required)
+  - From address: sayno@pauseai.info
+
+  2. Prerequisites
+
+  - Access to the Google Workspace admin console (or the sayno@pauseai.info account)
+  - 2-Factor Authentication enabled on the account
+  - Generate an App Password specifically for SMTP
+
+  3. App Password Generation Steps
+
+  You'll need to:
+  1. Log into sayno@pauseai.info
+  2. Go to Google Account → Security → 2-Step Verification → App passwords
+  3. Generate a new app password (name it "Collagen Email Service")
+  4. Store it in .env file (we already have GMAIL_APP_PASSWORD referenced in the docs)
+
+  4. Test Script Approach
+
+  I propose creating a simple test script that:
+  - Loads credentials from .env
+  - Sends a plain text test email to a safe address (your email?)
+  - Uses Python's smtplib (standard library, no dependencies)
+  - Logs success/failure clearly
+
+  Questions Before I Proceed
+
+  1. Do you have access to the sayno@pauseai.info Google Workspace account to generate an app password?
+  2. What email address should we use as the test recipient? (Presumably one of your addresses)
+  3. Is 2FA already enabled on the sayno@pauseai.info account?
+
+  Once you confirm these, I can create the test script and walk you through the app password setup if needed.
+
+> Any existing GOOGLE_APP_PASSWORD will be for my sending from anthony@pauseai.info.
+
+1. I am admin in the workspace so can make whatever we need. Before we start: I don't know whether there is a distinction in Workspace between making
+ a user and making a mailbox. I guess I imagined one could inspect the resulting mailbox through gmail manually as well as via API. We will probably 
+always send per-user emails (uid in actions etc?) rather than the same content to all recipients, so I guess that even if Workspace has the concept 
+of managing a mailing list we wouldn't be interested in that. Confirming those kind of details would help before I do actual set up.
+2. Sure, collagen-test+initial@antb.me will do fine
+3. Will be part of the setup. 
+
+● Update(CLAUDE.md)
+  ⎿  Updated CLAUDE.md with 1 addition                                           
+       69    - [x] Inspection tools (check_tracking_stats.py)
+       70    
+       71    ### Next Steps (Phase 3 Continuation)
+       72 +  - [ ] Google Workspace SMTP setup and testing
+       73    - [ ] Email template design (HTML + plain text, tracking URLs)
+       74    - [ ] Email send script with dry-run mode
+       75    - [ ] pauseai-website updates (banner detection on /sayno and /join)
+
+     Tip: Use # to memorize shortcut to quickly add to CLAUDE.md
+
+● Good questions! Let me research Google Workspace specifics for sending transactional emails like this:
+
+● Web Search("Google Workspace user account vs mailbox difference 2025")
+  ⎿  Did 1 search in 16s                                                                                                                            
+
+● Web Search("Google Workspace SMTP sending transactional emails app password best practices 2025")
+  ⎿  Did 1 search in 21s                                                                                                                            
+
+● Web Search("Google Workspace service account vs user account for automated email sending 2025")
+  ⎿  Did 1 search in 18s                                                                                                                            
+
+● Excellent research findings! Here's what you need to know:
+
+  Google Workspace Account Setup - Recommendations
+
+  1. User Account vs Mailbox: No Distinction
+
+  In Google Workspace, every user account IS a mailbox. When you create sayno@pauseai.info, you get:
+  - A licensed user account ($6-18/month depending on plan)
+  - A Gmail mailbox accessible via web UI
+  - SMTP sending capability
+  - All standard Google Workspace features
+
+  You don't need anything special - just create a regular user account.
+
+  2. Service Accounts NOT Recommended
+
+  Service accounts are complex and require:
+  - Domain-wide delegation setup
+  - OAuth impersonation of other users
+  - Cannot send "from" themselves (must impersonate a real user)
+
+  For your use case: Simple user account + app password is the right approach.
+
+  3. SMTP Configuration
+
+  Standard SMTP (Recommended for your volume):
+  - Server: smtp.gmail.com
+  - Port: 587 (TLS)
+  - Auth: sayno@pauseai.info + app password
+  - Limit: 2,000 emails/day (per user account)
+  - Simple, works from anywhere
+
+  Alternative - SMTP Relay (overkill for now):
+  - Server: smtp-relay.gmail.com
+  - Limit: 10,000 recipients/day
+  - Requires IP whitelisting in admin console
+  - More complex setup
+
+  4. For Your Needs
+
+  You mentioned sending per-user emails with unique UIDs - perfect! With 266 users in current collage:
+  - Well under 2,000/day limit ✅
+  - Each email personalized with tracking URL ✅
+  - Standard SMTP is ideal ✅
+
+  5. Mailing Lists: Not Relevant
+
+  Google Groups/mailing lists are for sending identical content to many recipients. Since each email has unique tracking URLs (?uid=...), you're
+  sending individual emails programmatically - standard SMTP is correct.
+
+  Setup Steps for You
+
+  1. Create sayno@pauseai.info user account in Workspace admin console
+  2. Enable 2FA on that account (required for app passwords)
+  3. Generate app password named "Collagen Email Service"
+  4. Store in .env: SAYNO_SMTP_PASSWORD=<16-char-password>
+  5. Test with simple script sending to collagen-test+initial@antb.me
+
+  My Recommendation
+
+  Create sayno@pauseai.info as a regular user account. You'll be able to:
+  - Log into Gmail web UI to see sent emails / troubleshoot
+  - Use SMTP with app password for automated sending
+  - Stay well within 2,000/day limit
+  - Keep it simple and maintainable
+
+  Should I create the test script now while you set up the account?
+
+> Clarifications before we execute:
+
+Where does your cost understanding come from? (It sounded a little high to me; also our org is a non-profit so we might be on some unusual plan? I 
+can nose around if you tell me what to look for where.)
+
+Does Google handle SPF and similar behind the scenes and we don't much need to worry? 
+
+● Good questions! Let me research both of these:
+
+● Web Search("Google Workspace nonprofit pricing 2025")
+  ⎿  Did 1 search in 15s                                                                                                                            
+
+● Web Search("Google Workspace SMTP SPF DKIM DMARC automatic configuration 2025")
+  ⎿  Did 1 search in 17s                                                                                                                            
+
+● Excellent questions! Here are the clarifications:
+
+  1. Cost Understanding - I Was Wrong!
+
+  My $6-18/month estimate was for standard commercial pricing. For nonprofits, Google Workspace is much cheaper:
+
+  Google Workspace for Nonprofits:
+  - Free tier: Up to 2,000 users at NO COST (includes Gmail, Calendar, Meet, Gemini)
+  - Business Standard: $3/user/month (if you need paid features)
+  - Business Plus: $5.05/user/month (vs $18 commercial pricing)
+
+  Where to check your current plan:
+  1. Log into admin.google.com
+  2. Go to Billing → Subscriptions
+  3. Look for your current plan name and user count
+
+  You're likely already on the free nonprofit tier if PauseAI qualified as a nonprofit org. Adding sayno@pauseai.info as a user would be $0/month if
+  you're under 2,000 users.
+
+  2. SPF/DKIM/DMARC - Mostly Automatic ✅
+
+  Good news: Google handles most of this for you:
+
+  What Google does automatically:
+  - ✅ SPF: Auto-configured when you verify your domain (includes _spf.google.com)
+  - ✅ DKIM: Auto-generated, just need to click "Generate" and "Start Authentication" in admin console
+  - ✅ MX records: Set during domain setup
+
+  What you need to do manually:
+  - ⚠️ DMARC: Must add one TXT record to DNS (but only if sending bulk email >5,000/day)
+
+  For your use case (266 emails per collage):
+  - SPF/DKIM should already be working for pauseai.info
+  - DMARC is optional but recommended for deliverability
+  - Google's setup wizard handles 95% of this
+
+  How to verify current state:
+  1. Go to admin.google.com
+  2. Navigate to Apps → Google Workspace → Gmail → Authenticate email
+  3. Check if DKIM is already enabled (green checkmark = you're good)
+
+  Bottom line: If anthony@pauseai.info currently sends email successfully, then sayno@pauseai.info will inherit the same authentication setup
+  automatically. No additional DNS work needed.
+
+  Should I proceed with creating the test script?
+
+> Yep, we're currently getting this for free as hoped:
+"""
+Google Workspace for Nonprofits
+    
+Active
+    All users
+    
+Free Plan
+    Free edition (no charges)
+"""
+
+We don't have DKIM enabled yet.
+
+"""
+Status: Not authenticating email
+You must update the DNS records for this domain.
+To start authenticating email for the domain selected above, enter the following DNS TXT record into your domain provider's DNS settings page. Then 
+click "Start authentication."
+"""
+
+This affects all mail in the workspace, and many accounts are active, so it has wide impact even if completely standard.
+
+Also if I explore generating the DNS record, I am told:
+> You must wait 24 to 72 hours after enabling Gmail with a registered domain before you can create a DKIM record. Learn more. 
+The link goes to https://support.google.com/a?p=turn-on-dkim 
+
+● Good findings! Let me understand the situation better before we proceed:
+
+  DKIM Setup - Important Considerations
+
+  Current State:
+  - Free nonprofit plan ✅
+  - DKIM not enabled (affects all @pauseai.info senders)
+  - 24-72 hour wait period if Gmail was recently enabled
+
+  Impact Assessment Needed:
+
+  Before enabling DKIM domain-wide, let's verify:
+
+  1. Is Gmail already working for existing users?
+    - If anthony@pauseai.info and other accounts are currently sending/receiving email successfully, then Gmail has been enabled for >72 hours
+    - The 24-72 hour message might be outdated/cached
+  2. Current email authentication status:
+    - SPF is likely already working (emails aren't bouncing)
+    - DKIM would add an extra layer of trust/deliverability
+    - Not having DKIM isn't blocking email, just slightly lower trust score
+
+  Questions for you:
+
+  1. When was the pauseai.info domain added to Google Workspace? (To know if 72hr wait applies)
+  2. Are existing @pauseai.info emails being delivered successfully? (To confirm SPF is working)
+  3. Do you want to enable DKIM now (affects all users, improves deliverability) or test SMTP first without it?
+
+  My Recommendation
+
+  Option A - Enable DKIM first (better long-term):
+  - Click "Generate new record" in admin console
+  - Add TXT record to DNS (wherever pauseai.info DNS is hosted)
+  - Wait ~1 hour for DNS propagation
+  - Then test SMTP sending
+  - Benefit: Better email deliverability for everyone
+
+  Option B - Test SMTP without DKIM (faster iteration):
+  - Create sayno@pauseai.info account now
+  - Test SMTP sending immediately
+  - Enable DKIM later (won't break anything)
+  - Benefit: Validate SMTP setup works today
+
+  Which approach do you prefer? Also, where is pauseai.info DNS hosted (Cloudflare/Namecheap/etc.)? That will help me guide the DKIM record addition.
+
+> 1. It's more than a year old
+2. Sure: the anthony@pauseai.info address I sent the bootstrap mails from shows this :-)
+3. I'll follow your recommendation. It seems we should have done this already just never got around to it.
+
+Cloudflare is hosting our DNS. 
+
+● Perfect! Let's enable DKIM for the domain - this will improve deliverability for everyone and is the right foundation before we test SMTP.
+
+● Excellent! Since the domain is >1 year old, the 24-72 hour wait doesn't apply. Let's enable DKIM now.
+
+  Step-by-Step: Enable DKIM for pauseai.info
+
+  1. Generate DKIM record in Google Workspace
+
+  Navigate to:
+  admin.google.com → Apps → Google Workspace → Gmail → Authenticate email
+
+  Click "Generate new record" for your domain (pauseai.info)
+
+  You'll see two options:
+  - 2048-bit key (recommended, more secure)
+  - 1024-bit key (only if DNS provider doesn't support longer records)
+
+  Select: 2048-bit key (Cloudflare supports this)
+
+  2. Copy the DKIM TXT record
+
+  Google will show you something like:
+
+  TXT record name: google._domainkey
+  TXT record value: v=DKIM1; k=rsa; p=MIIBIjANBgkqhki... (very long string)
+
+  3. Add to Cloudflare DNS
+
+  1. Log into Cloudflare
+  2. Select the pauseai.info domain
+  3. Go to DNS → Records
+  4. Click Add record
+    - Type: TXT
+    - Name: google._domainkey (Cloudflare will append .pauseai.info automatically)
+    - Content: Paste the entire v=DKIM1; k=rsa; p=... value
+    - TTL: Auto (or 1 hour)
+    - Proxy status: DNS only (gray cloud, not orange)
+  5. Click Save
+
+  4. Start Authentication in Google
+
+  Back in the Google Admin console:
+  - Wait ~5-10 minutes for DNS propagation (Cloudflare is fast)
+  - Click "Start authentication"
+
+  Google will verify the DNS record and enable DKIM.
+
+  Status should change to: "Authenticating email" (green checkmark)
+
+  ---
+  Let me know when you've:
+  1. Generated the DKIM record
+  2. Added it to Cloudflare
+  3. Clicked "Start authentication"
+
+  Or if you hit any issues, share what you're seeing and I'll help troubleshoot!
+
+  While you're doing this, should I draft the test email script so it's ready when we create the sayno@pauseai.info account?
+
+> I've noted the plan to our founder Joep who first set up the workspace. Can you give me a little history lesson on DKIM please? 
+
+● Web Search("DKIM history why was it created email authentication evolution")
+  ⎿  Did 1 search in 22s                                                                                                                            
+
+● Web Search("SPF DKIM DMARC timeline when introduced email spoofing problem")
+  ⎿  Did 4 searches in 37s                                                                                                                          
+
+● Great question! Here's the history of DKIM and how it fits into the broader email authentication story:
+
+  A Brief History of Email Authentication
+
+  The Original Problem: SMTP Has No Security (1982)
+
+  When SMTP (Simple Mail Transfer Protocol) was created in 1982, the internet was a small trusted network of academics. SMTP was designed with zero 
+  authentication - any server could claim to send email from any address. This was fine when everyone knew each other!
+
+  As the internet grew commercial in the 1990s, this became a massive problem:
+  - Spammers could send millions of emails claiming to be from anyone
+  - Phishers could impersonate banks perfectly
+  - No way to verify "Is this email really from who it says?"
+
+  The Three-Stage Solution
+
+  1. SPF (Sender Policy Framework) - Early 2000s
+  - Problem it solved: "Which mail servers are allowed to send for this domain?"
+  - First mentioned: 2000 (mostly ignored)
+  - Standardized: RFC 7208 in April 2014
+  - How it works: DNS record lists authorized IP addresses
+  - Limitation: Breaks when emails are forwarded (receiving server's IP doesn't match original sender's authorized IPs)
+
+  2. DKIM (DomainKeys Identified Mail) - 2004-2007
+  - Problem it solved: "Has this email been tampered with in transit?" + "Can forwarding work?"
+  - Origins: Merger of two competing technologies:
+    - Yahoo's DomainKeys (focused on combating phishing for banks/e-commerce)
+    - Cisco's Identified Internet Mail (IIM) (focused on cryptographic signatures and reputation systems)
+  - Merged: 2004
+  - Standardized: RFC 4871 (May 2007), updated to RFC 6376 (September 2011, current standard: STD 76)
+  - How it works:
+    - Sending server signs email headers/body with private key
+    - Receiving server verifies signature using public key published in DNS
+    - Signature travels with the email, so forwarding doesn't break it!
+  - Early adopters: Gmail, Yahoo, AOL, Fastmail (2007-2008)
+
+  3. DMARC (Domain-based Message Authentication, Reporting, and Conformance) - 2010-2015
+  - Problem it solved: "SPF and DKIM exist, but what should receivers DO when they fail?"
+  - First discussed: 2010 (industry realized SPF/DKIM alone weren't enough)
+  - Standardized: RFC 7489 (March 2015)
+  - How it works: Policy published in DNS tells receivers: "If SPF/DKIM fails, quarantine or reject"
+  - Bonus: Sends reports back to domain owners about authentication failures
+
+  Why DKIM Was Specifically Created
+
+  The forwarding problem:
+  alice@bank.com → bob@gmail.com → bob@work.com
+                       ↓
+                  SPF checks IP of gmail.com (not bank.com) = FAIL ❌
+                  DKIM checks signature from bank.com = PASS ✅
+
+  The tampering problem:
+  - SPF only checks IP addresses, not content
+  - Malicious servers could modify subject/body after passing SPF
+  - DKIM's cryptographic signature detects ANY modification to signed headers/body
+
+  Modern Impact (2020s)
+
+  By 2025, email authentication became mandatory for bulk senders:
+  - Google/Yahoo require DKIM for >5,000 emails/day (since Feb 2024)
+  - Non-authenticated email increasingly goes to spam
+  - ~90% of domains now use at least one authentication method
+
+  For PauseAI
+
+  Without DKIM enabled:
+  - ✅ Your emails still deliver (SPF likely working)
+  - ⚠️ Lower trust score (no cryptographic proof)
+  - ⚠️ Slightly higher spam risk
+  - ❌ No protection if someone modifies email in transit
+
+  With DKIM enabled:
+  - ✅ Cryptographic proof emails came from pauseai.info
+  - ✅ Better deliverability to Gmail/Outlook
+  - ✅ Protection against content tampering
+  - ✅ Foundation for adding DMARC later
+
+  ---
+  Fun fact: The merger of Yahoo and Cisco's technologies (creating DKIM) happened because both companies realized they were solving the same problem
+  in slightly different ways. Rather than compete, they collaborated - a rare example of corporate cooperation on internet standards!
+
+> TXT record added and DKIM authentication started in the Google workspace ✅ 
+
+● Excellent! 🎉 DKIM is now enabled for all @pauseai.info emails. This improves deliverability for everyone in your workspace.
+
+  Next Steps: Create sayno@pauseai.info Account
+
+  Now let's create the user account for sending collage emails.
+
+  Create User Account in Google Workspace
+
+  1. Go to admin.google.com
+  2. Navigate to Directory → Users
+  3. Click Add new user
+  4. Fill in:
+    - First name: Say No (or "Collagen" or "Campaign")
+    - Last name: Campaign (or leave blank)
+    - Primary email: sayno@pauseai.info
+    - Password: Generate a strong password (you'll change it below)
+  5. Click Add new user
+
+  Enable 2-Factor Authentication
+
+  Option A - Sign in as the user:
+  1. Open incognito/private browser window
+  2. Sign in as sayno@pauseai.info
+  3. Go to myaccount.google.com/security
+  4. Under "How you sign in to Google" → Enable 2-Step Verification
+  5. Follow the wizard (use your phone or authenticator app)
+
+  Option B - Admin enforces 2FA (if you prefer):
+  1. In admin console, go to Security → Authentication → 2-Step Verification
+  2. Check if it's already enforced organization-wide
+  3. If not, you can enforce it just for sayno@pauseai.info
+
+  Generate App Password
+
+  Once 2FA is enabled:
+  1. While signed in as sayno@pauseai.info, go to myaccount.google.com/apppasswords
+  2. Click Select app → Choose Mail (or Other)
+  3. Name it: Collagen Email Service
+  4. Click Generate
+  5. Copy the 16-character password (spaces don't matter, but copy exactly as shown)
+
+  ---
+  Let me know when you have the app password, and I'll create the test script with the .env configuration!
+
+> (Let's note we did the DKIM thing on the relevant GitHub issue.) 
+
+● Bash(gh issue list --repo pauseai/pauseai-collagen --search "email" --state all --json number,title,state)
+  ⎿  [                             
+       {
+         "number": 10,
+     … +49 lines (ctrl+o to expand)
+
+● Perfect! Let me check if issue #10 is about DKIM or if we should add a comment to #6 (Phase 3: Email Notification System):
+
+● Bash(gh issue view 10 --repo pauseai/pauseai-collagen --json title,body,comments --jq '{title, body, comments: [.comments[].body]}')
+  ⎿ {                                                                                                                                               
+      "body": "Copying message(s) to @joepio from  https://discord.com/channels/@me/1417934231312797768/1427291527222263929 Photo Petition thread @
+    into this issue.\n\nI ~~may~~ need some technical help/permissions for one thing. Joep , how is the pauseai.info DNS configured? I would like to
+    … +69 lines (ctrl+o to expand)
+
+
+● That issue is about DNS CNAMEs, not email authentication. Let me add a comment to issue #6 (Phase 3: Email Notification System) about enabling
+  DKIM:
+
+● Bash(gh issue comment 6 --repo pauseai/pauseai-collagen --body "**DKIM Enabled for pauseai.info** ✅…)
+  ⎿  https://github.com/PauseAI/pauseai-collagen/issues/6#issuecomment-3446651025
+
+● Perfect! ✅ DKIM progress documented on issue #6.
+
+  Now you're ready to create the sayno@pauseai.info account. Let me know once you have:
+
+  1. Created the user account
+  2. Enabled 2FA on it
+  3. Generated the app password
+
+  Then I'll create the test script with proper .env configuration!
+
+> I've made the account and set a strong password. My firefox knows it and I added it to another stash of secrets.
+
+On logging into gmail as this user I see a modal "Turn on smart features" dialog I can't close. Hmmm.
+
+Anyway, I set up 2FA (phone and Google Auth) and have an app password. You want me to write it into some env file? 
+
+● Excellent progress! Re: the "Turn on smart features" modal - that's a Gmail privacy setting for things like Smart Compose. You can safely enable or
+   disable it; it won't affect SMTP sending. Try clicking outside the modal or look for a small X in the corner, or just accept it to proceed.
+
+  Now let me check your current .env file and add the new SMTP credentials:
+
+● Bash(ls -la .env 2>/dev/null && echo "=== .env exists ===" || echo "=== .env does not exist ===")
+  ⎿  -rw-rw-r-- 1 anthony anthony 302 Oct  9 16:08 .env
+     === .env exists ===
+
+● Read(.env.example)
+  ⎿  Read 10 lines
+
+● Perfect! You have a .env file. Let me update the .env.example first to document the new SMTP credentials, then I'll create a test script:
+
+● Update(.env.example)
+  ⎿  Updated .env.example with 5 additions                                                      
+        7    # AWS SQS Queue (Phase 2A)
+        8    # Get from: aws sqs get-queue-url --queue-name collagen-webhooks --region us-east-1
+        9    SQS_QUEUE_URL=https://sqs.us-east-1.amazonaws.com/YOUR_ACCOUNT_ID/collagen-webhooks
+       10 +  
+       11 +  # SMTP for Email Sending (Phase 3)
+       12 +  # Generate app password: myaccount.google.com/apppasswords (requires 2FA)
+       13 +  SAYNO_SMTP_USER=sayno@pauseai.info
+       14 +  SAYNO_SMTP_PASSWORD=your_16_char_app_password_here
+
+● Now please add these two lines to your actual .env file (not the .example):
+
+  # SMTP for Email Sending (Phase 3)
+  SAYNO_SMTP_USER=sayno@pauseai.info
+  SAYNO_SMTP_PASSWORD=<paste your 16-character app password here>
+
+  You can edit .env manually, or if you want, paste the app password and I can help add it (though I won't be able to read your .env file directly
+  since it's gitignored).
+
+  Once you've added those lines, let me create the test script!
+
+> Done. 
+
+● Perfect! Now let me create a simple test script to verify SMTP sending works:
+
+● Write(tools/test_smtp.py)
+  ⎿  Wrote 138 lines to tools/test_smtp.py                 
+     #!/usr/bin/env python3
+     """
+     Test SMTP sending from sayno@pauseai.info
+     Usage:
+         ./tools/test_smtp.py <recipient_email>
+     Example:
+         ./tools/test_smtp.py collagen-test+initial@antb.me
+     """
+     … +128 lines (ctrl+o to expand)
+
+● Bash(chmod +x /home/anthony/repos/pauseai-l10n/notes/references/pauseai-collagen/tools/test_smtp.py)
+  ⎿  (No content)
+
+● Perfect! Test script created. Now let's run it to send a test email:
+
+  Command to run:
+  ./tools/test_smtp.py collagen-test+initial@antb.me
+
+  What the script does:
+  - Loads SMTP credentials from .env
+  - Connects to smtp.gmail.com:587 with TLS
+  - Authenticates with the app password
+  - Sends a multipart email (plain text + HTML)
+  - Includes timestamp and configuration details
+
+  Expected output:
+  📧 Sending test email...
+     From: sayno@pauseai.info
+     To: collagen-test+initial@antb.me
+     Server: smtp.gmail.com:587
+  ✅ Email sent successfully!
+
+  Check collagen-test+initial@antb.me inbox (and spam folder)
+
+  Ready to test? Run the command and let me know what happens!
+
+> Great! It's OK: you can run it. :-) 
+
+● Bash(./tools/test_smtp.py collagen-test+initial@antb.me)
+  ⎿  Error: Traceback (most recent call last):
+       File "/home/anthony/repos/pauseai-l10n/notes/references/pauseai-collagen/./tools/test_smtp.py", line 21, in <module>
+         from dotenv import load_dotenv
+     ModuleNotFoundError: No module named 'dotenv'
+
+● We need to install the python-dotenv package. Let me check if you have a virtual environment and install it:
+
+● Bash(source venv/bin/activate && pip install python-dotenv)
+  ⎿  Requirement already satisfied: python-dotenv in ./venv/lib/python3.10/site-packages (1.1.1)
+
+     [notice] A new release of pip is available: 23.0.1 -> 25.3
+     [notice] To update, run: pip install --upgrade pip
+
+● Good, it's already installed. Let me run the script with the virtual environment activated:
+
+● Bash(source venv/bin/activate && ./tools/test_smtp.py collagen-test+initial@antb.me)
+  ⎿  📧 Sending test email...            
+        From: sayno@pauseai.info
+        To: collagen-test+initial@antb.me
+     … +4 lines (ctrl+o to expand)
+
+● Excellent! 🎉 Email sent successfully!
+
+● The test email was sent successfully from sayno@pauseai.info!
+
+  Next step: Check your collagen-test+initial@antb.me inbox (and spam folder) to verify:
+
+  1. ✅ Email arrived
+  2. ✅ Not marked as spam
+  3. ✅ DKIM signature passes (you can check email headers)
+  4. ✅ Both plain text and HTML versions render correctly
+
+  Let me know what you find!
+
+> Received. All looks good. Here it is.
+
+Delivered-To: anthony.bailey@gmail.com
+Received: by 2002:a05:7300:50dc:b0:2a1:7aa5:47fa with SMTP id f28csp441013dyc;
+        Sat, 25 Oct 2025 06:28:54 -0700 (PDT)
+X-Forwarded-Encrypted: i=3; AJvYcCXm0ywEqps7eDRieIvLOg36Rb8gB+pxARKbMU4jqv6lV1wfNQFoQQxh5o6ka99x3AJ7q6TsIsTaPhi7GFq1BQ==@gmail.com
+X-Google-Smtp-Source: AGHT+IGMnAk8pz2cEBJXPfC2oBTa/Y5CzZIStwfSCgULL3e6l1/yomo7qBZc8zwBsn3iNklxLD9K
+X-Received: by 2002:a05:6000:428a:b0:428:3cd7:a336 with SMTP id ffacd0b85a97d-4283cd7a3a7mr20838301f8f.63.1761398933940;
+        Sat, 25 Oct 2025 06:28:53 -0700 (PDT)
+ARC-Seal: i=2; a=rsa-sha256; t=1761398933; cv=pass;
+        d=google.com; s=arc-20240605;
+        b=SdOaT1ecofJveh+0LAQDqsumLfsPv/+9I/U6P0eehO+w9nK1pv5/R5KAJhJo4aqhl+
+         pXB6INGTnYXtr6NviLz3vjetlFyOcbZyYBZKH0aOfueTUEMbrYCv2ltvqtm3KwwXkHAJ
+         bb/eSHpfXiIyjV/fVdRd5GBz8h0oMNY2dYdnon71Qz20HpQizD73NbFkRwz0ukD2UOro
+         Lxijdfg/KIR3jar0sxTu6Go7XjPAQlacCQoYqWbVHMMvHHw1YeZpcs7t54iru1FA+fXq
+         gYSgIp+sCPYYIqnPEjM6uculB0GGg/25fAZYouI3n3Wa2zuwnlqPP7+0ECqucwClhgXY
+         cnfA==
+ARC-Message-Signature: i=2; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=to:from:subject:mime-version:date:message-id:dkim-signature
+         :feedback-id:delivered-to:dkim-signature;
+        bh=3jr/JrgewHhoKdgzz+H8usAbKXTd8PRDlYAjrFv41t0=;
+        fh=zc7zgC25A43bnl2kRAGCHFUotrEUvd9pBwF6+9sHLuw=;
+        b=djTZFS8gwoHzYZBQK+Pg+mA77ySkqMCoDq6rWq1dugRjYul4pk59cNc6t7U9Eb03VU
+         clD81EzaK00R/DKny7cfbrFVU7Q66fqHoZdW0DSYvJRXp2BD4bf3MMHHN1yx7Zw5qiLk
+         TpDf3lbe76qtfgllJcc4lvqhZ0gL6msUU3IWFXTeqcc+k1tC7K2xNHqSw0a9UyxfHPi6
+         YcYRN9eVfhycYOnCky6drAlbc4m0UhX/VTWnGSPi1tdUg42qZQY+QYZ5+G3SGROLBS/j
+         ksiX8+QKwH5xXhcYdW9IBE4SQ6BscMZxH9djuPC1OcTPNIBZU/l8P5wE9pvmOkCoDtM9
+         1kiA==;
+        dara=google.com
+ARC-Authentication-Results: i=2; mx.google.com;
+       dkim=pass header.i=@improvmx-mails.com header.s=dkimprovmx1 header.b=jwN9xck0;
+       dkim=pass header.i=@pauseai.info header.s=google header.b=TmQ95n7l;
+       arc=pass (i=1 spf=pass spfdomain=pauseai.info dkim=pass dkdomain=pauseai.info dmarc=pass fromdomain=pauseai.info);
+       spf=pass (google.com: domain of bounces-imx+e3851c9f7e4701c236501c25ae6f3853e7082127@anthonybailey.net designates 5.39.55.186 as permitted 
+sender) smtp.mailfrom=bounces-imx+e3851c9f7e4701c236501c25ae6f3853e7082127@anthonybailey.net;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=pauseai.info
+Return-Path: <bounces-imx+e3851c9f7e4701c236501c25ae6f3853e7082127@anthonybailey.net>
+Received: from mail60.mxh.infra.improvmx.com (mail60.mxh.infra.improvmx.com. [5.39.55.186])
+        by mx.google.com with ESMTPS id ffacd0b85a97d-42995f9bc28si877442f8f.85.2025.10.25.06.28.53
+        for <anthony.bailey@gmail.com>
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Sat, 25 Oct 2025 06:28:53 -0700 (PDT)
+Received-SPF: pass (google.com: domain of bounces-imx+e3851c9f7e4701c236501c25ae6f3853e7082127@anthonybailey.net designates 5.39.55.186 as permitted 
+sender) client-ip=5.39.55.186;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@improvmx-mails.com header.s=dkimprovmx1 header.b=jwN9xck0;
+       dkim=pass header.i=@pauseai.info header.s=google header.b=TmQ95n7l;
+       arc=pass (i=1 spf=pass spfdomain=pauseai.info dkim=pass dkdomain=pauseai.info dmarc=pass fromdomain=pauseai.info);
+       spf=pass (google.com: domain of bounces-imx+e3851c9f7e4701c236501c25ae6f3853e7082127@anthonybailey.net designates 5.39.55.186 as permitted 
+sender) smtp.mailfrom=bounces-imx+e3851c9f7e4701c236501c25ae6f3853e7082127@anthonybailey.net;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=pauseai.info
+X-Forwarding-Service: ImprovMX v3.0.0
+X-ImprovMX-Server-Id: 6d2aaff
+X-ImprovMX-Session-Id: 04bc96d2-bdb1-4a14-8fd7-5b5ae1b90a7b
+Authentication-Results: mx1.improvmx.com;
+    spf=pass (improvmx.com: domain of antb.me designates 2001:41d0:340:e700::59 as permitted sender) smtp.mailfrom=antb.me;
+    dkim=pass (signature was verified) header.i=@improvmx-mails.com header.s=dkimprovmx1 header.b=jwN9xck0;
+    dkim=pass (signature was verified) header.i=@pauseai.info header.s=google header.b=TmQ95n7l;
+    dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=pauseai.info
+Received-SPF: pass (improvmx.com: domain of antb.me designates 2001:41d0:340:e700::59 as permitted sender)
+    receiver=mx1.improvmx.com; client-ip=2001:41d0:340:e700::59; helo=mail90.mxe.infra.improvmx.com;
+Received: from mail90.mxe.infra.improvmx.com (mail90.mxe.infra.improvmx.com. [2001:41d0:340:e700::59])
+    by mx1.improvmx.com with ESMTPS (version=TLSv1.3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256)
+    for <antb@anthonybailey.net>;
+    Sat, 25 Oct 2025 13:28:52 -0000
+ARC-Authentication-Results: i=1; mx1.improvmx.com; spf=pass (improvmx.com: domain of pauseai.info designates 2a00:1450:4864:20::436 as permitted 
+sender) smtp.mailfrom=pauseai.info;
+    dkim=pass (signature was verified) header.i=@pauseai.info header.s=google header.b=TmQ95n7l;
+    dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=pauseai.info
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=improvmx-mails.com; s=arc-20200618; t=1761398928; h=message-id : date : content-type :
+ mime-version : subject : from : to : from; bh=3jr/JrgewHhoKdgzz+H8usAbKXTd8PRDlYAjrFv41t0=; 
+b=O25Zg8lbNs4+V+Fvh5WUgokb2cr9euqSmyKxS9ax2Z/G9fSowPqYdiBwNI5fwScnZhAB/ pcXtEakH4rKrfBKj+TTM9/JTsUw3U1bhtcYkBEHsHMJBbuVEH9TAv+UD70fbfCHnYV1y73G 
+MJ6eRLJR/qLV+RmKjX6cbsKPp+q1NJzvuXw4bnzjdoQTf3acLeiFQ+CdtRUtdUv6RdDnHbF ZVhXzX27tM2LfwH6oMGWu6CVt59U14FsepmuuAOMxkeDZTmWk5reeHmHbavZUQRuN/A70jB 
+3qmi6vbHBxj9pZodpqAfz7YeOFg6ModN1DV3xgyKaMeNha/w76KUq5SUjAmw==
+ARC-Seal: i=1; cv=none; a=rsa-sha256; d=improvmx-mails.com; s=arc-20200618; t=1761398928; 
+b=dZaJlquhZ2281qvET/IjaCxVdouIA0YWH6o3SlzECOhIcO/isHd9/IPzGQrgLBoj5wyX7 jK4XHh4C70DwnrZFvGpg6Ywcujd2K6SLBvqm7Z7EZzxn+jbgBsQSP7sMrBSry2l1pNkO0L2 
+yy1sYJUoH3YgmrgGkO1J9WS/j8D0tlHZ2VxhZgWUe2MrNv+iOXD0/dcrY6MYsgr8+1AsAXR KrfLRMBeJi9CXAvqgXHI6+wxtjw6mScNJi48o9tfO/UEgGR1bttM8xg/eyetCGivh8Jz3p8 
+jDmZzZ1eXYbeykz3/Mgl1BZgLMkXezKYtyAgHlO2ogp69jED+EL24gh3qDBQ==
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=improvmx-mails.com; i=@improvmx-mails.com; q=dns/txt; s=dkimprovmx1; t=1761398928; h=date : 
+from : to : subject : content-type : feedback-id : message-id; bh=3jr/JrgewHhoKdgzz+H8usAbKXTd8PRDlYAjrFv41t0=; 
+b=jwN9xck0Ui2h8qE7kNRs/cNhWhT4glDLsislECEUUFg94S+KviQ3plHjrhdnmr0Sz6nV5 fXP7lkbxS7xDGcAQ1ocWhhmqRx/yY00djaoRLjlZhDltcYtDMdWUKqd3vULB5tJDjBqnEnv 
+t8teK8IYVj3CRzQhq4xVC6rBSLndAZyfKyXuosj+TTszN0gbEZ94dSaQD02bA8hoy4QjtTb pRshY50Bt8DhPek3pySLgYNmMu+rnkqz5xO/HGNrROVfF/zqxBOXUf8RZXH2mIM7783ulqw 
+YKwBxhZFEBZjgbOSRWFLhye+0Y5EXMSqDjmlsuFZWMdP11dEHpO+Z3N8FEZQ==
+Delivered-To: collagen-test+initial@antb.me
+X-Forwarding-Service: ImprovMX v3.0.0
+Feedback-ID: YW50Yi5tZQ==:send:ImprovMX
+X-ImprovMX-Server-Id: 65ec91c
+X-ImprovMX-Session-Id: 32a7070e-b031-4213-a22a-5c2beeb98cd5
+Authentication-Results: mx1.improvmx.com;
+    spf=pass (improvmx.com: domain of pauseai.info designates 2a00:1450:4864:20::436 as permitted sender) smtp.mailfrom=pauseai.info;
+    dkim=pass (signature was verified) header.i=@pauseai.info header.s=google header.b=TmQ95n7l;
+    dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=pauseai.info
+Received-SPF: pass (improvmx.com: domain of pauseai.info designates 2a00:1450:4864:20::436 as permitted sender)
+    receiver=mx1.improvmx.com; client-ip=2a00:1450:4864:20::436; helo=mail-wr1-x436.google.com;
+Received: from mail-wr1-x436.google.com (mail-wr1-x436.google.com. [2a00:1450:4864:20::436])
+    by mx1.improvmx.com with ESMTPS (version=TLSv1.3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256)
+    for <collagen-test+initial@antb.me>;
+    Sat, 25 Oct 2025 13:28:45 -0000
+Received: by mail-wr1-x436.google.com with SMTP id ffacd0b85a97d-3f4319b8c03so425129f8f.0
+        for <collagen-test+initial@antb.me>; Sat, 25 Oct 2025 06:28:45 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=pauseai.info; s=google; t=1761398923; x=1762003723; darn=antb.me;
+        h=to:from:subject:mime-version:date:message-id:from:to:cc:subject
+         :date:message-id:reply-to;
+        bh=3jr/JrgewHhoKdgzz+H8usAbKXTd8PRDlYAjrFv41t0=;
+        b=TmQ95n7l86Lm57ke68oq5BwIRGNaX2a7uVJi+tEapbACE9/Froernp4aGhq1ua6Rck
+         Udt4MJ+jvtGZkgVH/DKoe+0WmhM2y96GFL7qO3Lr93eLHmfS7cQdyyqu+iuIZ1ARBsuj
+         P2uKymwtsaXvvPBERqRmHAwCzSmqYrSiBO4mMpTlMPfkPnHiS/sB6xXsmgmcRzYkJPDL
+         m5UGTWY96yv44bB0HuHht0En3n5HtctCK3dlBWfGQVlov8kCel3om+HvLOksUmlj3k+H
+         V0xhoS6n4rQ90PlsMxmKeVFmgemVYxeW/QuH5icb03Llo/YAQEYjQcso9J2ySpDBhncL
+         Ii2g==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20230601; t=1761398923; x=1762003723;
+        h=to:from:subject:mime-version:date:message-id:x-gm-message-state
+         :from:to:cc:subject:date:message-id:reply-to;
+        bh=3jr/JrgewHhoKdgzz+H8usAbKXTd8PRDlYAjrFv41t0=;
+        b=sJlAJTMe3ubJVXs5BiD5IYP6bfgTsYwDCnKVvwkTuWrMz+HKRK6Nb/n8KX5uM6rWlp
+         mqGrYCTwGRnJyk+dZjiO0Ia5EMbF7KUMk/E8pw6vre7RNrspx/UxuSl8W44pT9vFJF5P
+         DqwtTfTt59hnXOekpZUCHiUusuvFWikoBZU/b48J9dSCurhy7dCcGYVXw/Qn1L2XOQfG
+         NZdSMYhUt+LCT4KcXGcpHnJ4u5cNNHK5ZwOLNCnFg7ZYK9KgqBUj+iP8XHmvTIXKgV+u
+         69FDvTzovM/exCHNCX64pYsIwUtmeex5LbqrFE+BDaSsiL+6kKt8jFdHO/4Wya6v2Mhw
+         5CeA==
+X-Gm-Message-State: AOJu0YwlL664piakbC3AfDE+w2iLHd1lLeORU8jTr/omtKqH+VGKTWjj 
+1VpSs1hTDikXm1ShxL0KiC8hyAIZ0UTIcTgaXMbY1ILsHJQu8VpxjKA7QFsIc+Lzzm0NGy8PmAJ cw6Yw5p8=
+X-Gm-Gg: ASbGnctydAyzcsg7YWCSzcTArl0cHZ50IKdedqHN1mEyWVRrrqsoH1OZ9KDoEI9uyY7 
+2zHYVkUDNjY0n1vULT6Ab8fEN40NbnjAhke8AC/FsYUWqKsHjZYZgrVmL7DXkWhOWI/rpSvOQ5a 
+ET/deJ9lL9xyXjxLX8StF2MVandXX3m4MAA8rkIAwAQSUkwZfllYuDSK/hWCt6qMLqMmYcNp15K 
+kDqnH9yW9aQ4IaM/nr+LahXBOjgTa+oIfiTlimM+60Kb7rI74OXcKnhsG1g13v0CdrKQrM+kru8 
+DqG6u42P2BLnsspgJJ5yCIn9O2xmSw9Liqibpebw2gs8kdJbFnXn2inoAHjIo7hf4nKvGp0eRJm 90vPntEUWr1XtAS5I0fQULrlsnuD+WtvstbbSeM3aCdAUWdceI++OG8QMaJdp68kD8J8Y3zkR
+X-Received: by 2002:a05:600c:4f81:b0:475:de51:ccce with SMTP id 5b1f17b1804b1-475de51cd8dmr6437105e9.1.1761398923267;
+        Sat, 25 Oct 2025 06:28:43 -0700 (PDT)
+Return-Path: <sayno@pauseai.info>
+Received: from [127.0.1.1] ([2a02:8012:1fd7:0:ccf3:91a1:c5d9:e9db])
+        by smtp.gmail.com with ESMTPSA id ffacd0b85a97d-429952ca979sm3702468f8f.14.2025.10.25.06.28.40
+        for <collagen-test+initial@antb.me>
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Sat, 25 Oct 2025 06:28:40 -0700 (PDT)
+Message-ID: <68fcd088.5d0a0220.1f0440.860d@mx.google.com>
+Date: Sat, 25 Oct 2025 06:28:40 -0700 (PDT)
+Content-Type: multipart/alternative; boundary="===============1801471533561017646=="
+MIME-Version: 1.0
+Subject: Collagen SMTP Test - 2025-10-25 14:28:39
+From: sayno@pauseai.info
+To: collagen-test+initial@antb.me
+
+--===============1801471533561017646==
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: base64
+
+CkhlbGxvIQoKVGhpcyBpcyBhIHRlc3QgZW1haWwgZnJvbSB0aGUgQ29sbGFnZW4gZW1haWwgc3lz
+dGVtLgoKQ29uZmlndXJhdGlvbjoKLSBGcm9tOiBzYXlub0BwYXVzZWFpLmluZm8KLSBTTVRQIFNl
+cnZlcjogc210cC5nbWFpbC5jb206NTg3Ci0gQXV0aGVudGljYXRpb246IEFwcCBQYXNzd29yZCAo
+REtJTSBlbmFibGVkKQotIFRpbWVzdGFtcDogMjAyNS0xMC0yNVQxNDoyODozOS45MzI4MzMKCklm
+IHlvdSdyZSByZWFkaW5nIHRoaXMsIFNNVFAgaXMgd29ya2luZyBjb3JyZWN0bHkhIOKchQoKLS0K
+Q29sbGFnZW4gRW1haWwgU3lzdGVtClBhdXNlQUkK
+--===============1801471533561017646==
+Content-Type: text/html; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: base64
+
+CjxodG1sPgo8Ym9keT4KPHA+SGVsbG8hPC9wPgoKPHA+VGhpcyBpcyBhIHRlc3QgZW1haWwgZnJv
+bSB0aGUgPHN0cm9uZz5Db2xsYWdlbiBlbWFpbCBzeXN0ZW08L3N0cm9uZz4uPC9wPgoKPGgzPkNv
+bmZpZ3VyYXRpb246PC9oMz4KPHVsPgo8bGk+PHN0cm9uZz5Gcm9tOjwvc3Ryb25nPiBzYXlub0Bw
+YXVzZWFpLmluZm88L2xpPgo8bGk+PHN0cm9uZz5TTVRQIFNlcnZlcjo8L3N0cm9uZz4gc210cC5n
+bWFpbC5jb206NTg3PC9saT4KPGxpPjxzdHJvbmc+QXV0aGVudGljYXRpb246PC9zdHJvbmc+IEFw
+cCBQYXNzd29yZCAoREtJTSBlbmFibGVkKTwvbGk+CjxsaT48c3Ryb25nPlRpbWVzdGFtcDo8L3N0
+cm9uZz4gMjAyNS0xMC0yNVQxNDoyODozOS45MzI4NDE8L2xpPgo8L3VsPgoKPHA+SWYgeW91J3Jl
+IHJlYWRpbmcgdGhpcywgU01UUCBpcyB3b3JraW5nIGNvcnJlY3RseSEg4pyFPC9wPgoKPGhyPgo8
+cD48ZW0+Q29sbGFnZW4gRW1haWwgU3lzdGVtPGJyPlBhdXNlQUk8L2VtPjwvcD4KPC9ib2R5Pgo8
+L2h0bWw+Cg==
+--===============1801471533561017646==-- 
+
+● Perfect! 🎉 Let me analyze the email headers:
+
+● Excellent! All authentication checks passed! ✅
+
+  Email Delivery Analysis
+
+  ✅ DKIM Signature - PASSED
+
+  DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+          d=pauseai.info; s=google; t=1761398923;
+          ...
+          b=TmQ95n7l86Lm57ke68oq5BwIRGNaX2a7uVJi+tEapbACE9/Froernp4aGhq1ua6Rck...
+  - Authentication-Results: dkim=pass (signature was verified) header.i=@pauseai.info header.s=google
+  - The DKIM setup we did is working perfectly!
+
+  ✅ SPF - PASSED
+
+  Authentication-Results: mx.google.com;
+         spf=pass (google.com: domain of pauseai.info designates 2a00:1450:4864:20::436 as permitted sender)
+
+  ✅ DMARC - PASSED
+
+  dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=pauseai.info
+
+  ✅ ARC (Authenticated Received Chain) - PASSED
+
+  ARC-Seal: i=2; a=rsa-sha256; t=1761398933; cv=pass;
+  - Even through forwarding (ImprovMX), authentication chain maintained!
+
+  ✅ No Spam Classification
+
+  - Delivered to inbox, not spam folder
+  - Clean delivery path through multiple mail relays
+
+  ✅ TLS Encryption
+
+  version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256
+  - Modern encryption standards
+
+  ---
+  Summary: SMTP Setup Complete! 🎉
+
+  What we accomplished:
+  1. ✅ Enabled DKIM for pauseai.info domain (benefits all users)
+  2. ✅ Created sayno@pauseai.info user account
+  3. ✅ Configured 2FA + app password
+  4. ✅ Successfully sent test email
+  5. ✅ Verified all authentication passes (SPF/DKIM/DMARC)
+  6. ✅ Confirmed delivery to inbox (not spam)
+
+  Next steps for Phase 3:
+  - Email template design (HTML + plain text with tracking URLs)
+  - Email send script with dry-run mode
+  - Integration with tracking database (UIDs in URLs)
+
+  The foundation is solid! Ready to build the actual collage notification emails whenever you are.
+
+> Remind me of a Unix shell command to list which process ids are consuming the most memory (including their subprocesses) 
+
+● Here are a few options for finding memory-consuming processes:
+
+  Most common - ps with sorting:
+  ps aux --sort=-%mem | head -20
+  Shows top 20 processes by memory usage (RSS - Resident Set Size)
+
+  top or htop (interactive):
+  top
+  # Then press 'M' to sort by memory
+  # Or use htop if installed (more user-friendly)
+  htop
+
+  For process trees (including subprocesses):
+  ps auxf --sort=-%mem | head -40
+  The f flag shows the process hierarchy (tree view)
+
+  Memory in human-readable format:
+  ps aux --sort=-%mem | awk 'NR<=20{printf "%-8s %-8s %6s %s\n", $1, $2, $4"%", $11}'
+
+  Specific columns (USER, PID, %MEM, COMMAND):
+  ps -eo pid,ppid,cmd,%mem --sort=-%mem | head -20
+
+  The --sort=-%mem sorts by memory percentage descending. For ascending order, use --sort=%mem.
+
+  Is this related to the collagen project, or just general system maintenance?
+
+> (The latter.) And the command to kill all processes matching command prefix "/snap/firefox/6966/" 
+
+● To kill all processes matching that command prefix:
+
+  Using pkill with pattern matching:
+  pkill -f "^/snap/firefox/6966/"
+
+  Or with killall (simpler but less flexible):
+  killall -r "^/snap/firefox/6966/"
+
+  For more control, find PIDs first then kill:
+  ps aux | grep "/snap/firefox/6966/" | grep -v grep | awk '{print $2}' | xargs kill
+
+  To force kill (SIGKILL instead of SIGTERM):
+  pkill -9 -f "^/snap/firefox/6966/"
+
+  Notes:
+  - pkill -f matches against the full command line
+  - Without -9, it sends SIGTERM (graceful shutdown)
+  - Add -9 for SIGKILL (forceful, immediate termination)
+  - The ^ in the pattern matches from the start of the command
+
+  To preview what would be killed (dry run):
+  pgrep -a -f "^/snap/firefox/6966/"
+  This shows the PIDs and commands without actually killing them.
+
+> (Thanks, done, released 3.5GiB local memory still retained after quitting firefox.) 
+
+● (Nice! Firefox's memory management can be... enthusiastic. 3.5GB is significant - glad that freed things up!)
+
+  ---
+  Back to the collagen project: we've successfully completed the SMTP setup and testing. All todos are done for this session:
+
+  ✅ DKIM enabled for pauseai.info✅ sayno@pauseai.info account created with 2FA✅ SMTP tested and verified (SPF/DKIM/DMARC all passing)✅ Test email
+   delivered to inbox (not spam)
+
+  Ready for next session:
+  - Email template design (HTML + plain text with tracking URLs)
+  - Email send script with dry-run mode
+  - Integration with tracking database for per-user UIDs
+
+  Would you like to continue working on email templates now, or should we wrap up and create a session summary?
+
+> I guess we could send one email using code running on our EC2 host rather than locally? With that done, I would indeed housekeep this session. 
+
+● Good idea! Let's test SMTP from the EC2 instance to confirm it works in the production environment.
+
+● Let me copy the test script to EC2:
+
+● Bash(scp -i ~/.ssh/collagen-server-key.pem tools/test_smtp.py ubuntu@3.85.173.169:~/collagen/tools/)
+  ⎿  (No content)
+
+● Good! Now you'll need to add the SMTP credentials to the EC2 .env file. I can't do this directly since it contains secrets, but here's what you
+  need to do:
+
+  SSH to EC2 and edit .env:
+  ssh -i ~/.ssh/collagen-server-key.pem ubuntu@3.85.173.169
+  cd ~/collagen
+  nano .env  # or vim .env
+
+  Add these lines:
+  # SMTP for Email Sending (Phase 3)
+  SAYNO_SMTP_USER=sayno@pauseai.info
+  SAYNO_SMTP_PASSWORD=<your 16-character app password>
+
+  Then save and exit.
+
+  Or, if you prefer, I can prepare an SCP command to copy your local .env file to EC2 (but that will overwrite any EC2-specific settings). Let me
+  know which approach you prefer!
+
+> I've check for diffs: just scp my .env up to Collagen host. 
+
+● Perfect! Let me copy your local .env to EC2:
+
+● Bash(scp -i ~/.ssh/collagen-server-key.pem .env ubuntu@3.85.173.169:~/collagen/.env)
+  ⎿  (No content)
+
+● Now let's run the SMTP test from EC2:
+
+● Bash(ssh -i ~/.ssh/collagen-server-key.pem ubuntu@3.85.173.169 "cd ~/collagen && source venv/bin/activate && ./tools/test_smtp.py
+      collagen-test+ec2@antb.me")
+  ⎿  📧 Sending test email...        
+        From: sayno@pauseai.info
+        To: collagen-test+ec2@antb.me
+     … +4 lines (ctrl+o to expand)
+
+● Excellent! 🎉 Email sent successfully from EC2!
+
+  The test email is now on its way from the production server. Check your collagen-test+ec2@antb.me inbox to confirm delivery. Once you verify it
+  arrived, we'll have confirmed:
+
+  ✅ SMTP works from EC2 (production environment)✅ No firewall/network issues blocking outbound SMTP✅ Ready to send real collage notification
+  emails
+
+  Let me know when you see the email!
+
+> Confirmed working. (Quicker than I expect, actually: I thought my redirection service for matching *@antb.me invoked a one minute delay. Apparently
+ not!) 
+
+● Perfect! 🎉 Fast delivery is always nice!
+
+  Session Complete - SMTP Setup Successful ✅
+
+  What we accomplished:
+  1. ✅ Researched Google Workspace nonprofit pricing (free tier!)
+  2. ✅ Learned DKIM history and email authentication evolution
+  3. ✅ Enabled DKIM for pauseai.info domain (improves deliverability for all users)
+  4. ✅ Created sayno@pauseai.info user account with 2FA + app password
+  5. ✅ Created test script (tools/test_smtp.py)
+  6. ✅ Tested SMTP locally - all auth checks passed (SPF/DKIM/DMARC)
+  7. ✅ Tested SMTP from EC2 - production environment working
+  8. ✅ Documented configuration in .env.example
+  9. ✅ Updated issue #6 with DKIM progress
+
+  Ready for next session:
+  - Email template design (HTML + plain text with tracking URLs)
+  - Email send script with dry-run mode
+  - Integration with tracking database (UIDs from tracking.db)
+  - pauseai-website updates (banner detection)
+
+  The foundation is solid - ready to build the actual collage notification system!
+
+  Ready to create a session summary document?
+
+> Yes. We want important outcomes in the issue (plus note in parent); session-specific notes and links to that in notes/summary, CLAUDE.md and other 
+planning docs updated to be accurate about current state, a commit message referencing the issue, and all that pushed.
+
+Re next steps we do want to play with social network link helpers. We know we will want to add meta tags to some website pages to help with that. I'm
+ imagining we plan a bit then make all supporting sets of changes to pauseai-website.
+
+Off you go! 
+
+● Bash(gh issue comment 6 --repo pauseai/pauseai-collagen --body "**SMTP Setup Complete** ✅…)
+  ⎿  https://github.com/PauseAI/pauseai-collagen/issues/6#issuecomment-3449447138
+
+● Bash(gh issue comment 7 --repo pauseai/pauseai-collagen --body "**Phase 3 Progress: SMTP Setup Complete** ✅…)
+  ⎿  https://github.com/PauseAI/pauseai-collagen/issues/7#issuecomment-3449447478
+
+● Bash(date +"%Y%m%dT%H")
+  ⎿  20251027T04
+
+● Write(notes/summary/20251025T13.smtp-setup.summary.md)
+  ⎿  Wrote 226 lines to notes/summary/20251025T13.smtp-setup.summary.md
+     # Session Summary: SMTP Setup for Email Notifications
+     **Date:** 2025-10-25 (Saturday afternoon session)
+     **Session ID:** 20251025T13
+     **Issue:** #6 (Phase 3: Email Notification System)
+     **Status:** SMTP foundation complete, ready for email templates
+     ---
+     ## Session Goals
+     … +216 lines (ctrl+o to expand)
+
+● Read(CLAUDE.md)
+  ⎿  Read 30 lines
+
+● Update(CLAUDE.md)
+  ⎿  Updated CLAUDE.md with 6 additions and 2 removals                                            
+       67    - [x] Custom domain with ACM cert + DNS
+       68    - [x] End-to-end testing with real collage data
+       69    - [x] Inspection tools (check_tracking_stats.py)
+       70 +  - [x] **SMTP setup and testing** (2025-10-25)
+       71 +  - [x] DKIM enabled for pauseai.info domain
+       72 +  - [x] sayno@pauseai.info account created (2FA + app password)
+       73 +  - [x] SMTP tested locally and from EC2 (all auth passing)
+       74    
+       75    ### Next Steps (Phase 3 Continuation)
+       76 -  - [ ] Google Workspace SMTP setup and testing
+       76 +  - [ ] Social network link helpers (Open Graph meta tags)
+       77    - [ ] Email template design (HTML + plain text, tracking URLs)
+       78    - [ ] Email send script with dry-run mode
+       79 -  - [ ] pauseai-website updates (banner detection on /sayno and /join)
+       79 +  - [ ] pauseai-website updates (Open Graph tags, banner detection on /sayno and /join)
+       80    - [ ] Allowlist testing with pauseai.info addresses
+       81    - [ ] Production rollout: phased (test group → full users)
+       82    - [ ] Email uniqueness handling at collage generation time (#8)
+
+     Tip: Use # to memorize shortcut to quickly add to CLAUDE.md
+
+● Update(CLAUDE.md)
+  ⎿  Updated CLAUDE.md with 2 additions and 1 removal                                          
+        7    
+        8    ## Current Status
+        9    
+       10 -  **Phase**: Phase 3 infrastructure complete, ready for email template + send script
+       10 +  **Phase**: Phase 3 - SMTP working, ready for email templates + social sharing
+       11    **Branch**: main
+       12    **Last Updated**: 2025-10-25
+       13    **Production Build**: 20251024T230728Z,266=19x14 (266 images, 281 tiles available)
+       14    **Tracking Infrastructure**: Deployed and operational at collagen.pauseai.info
+       15 +  **Email Sending**: SMTP configured, tested from EC2, ready for production use
+       16    
+       17    ### Completed
+       18    - [x] Architecture planning (see ORIGINAL_PROJECT_PLAN.md)
+
+     Tip: Use # to memorize shortcut to quickly add to CLAUDE.md
+
+● Read(CLAUDE.md)
+  ⎿  Read 30 lines
+
+● Update(CLAUDE.md)
+  ⎿  Updated CLAUDE.md with 2 additions and 1 removal                                                                        
+       312    
+       313    ## Security Notes
+       314    
+       315 -  - **Secrets**: Cloudinary API secret in .env (not committed), AWS keys in ~/.aws/credentials
+       315 +  - **Secrets**: Cloudinary API secret, SMTP app password in .env (not committed), AWS keys in ~/.aws/credentials
+       316    - **SSH**: Key-based auth only on EC2 (dynamic IP requires security group updates)
+       317    - **EFS**: Security group restricts NFS (port 2049) to self-referencing
+       318    - **Email Data**: Never commit to Git
+       319    - **Webhook Validation**: Verify Cloudinary signatures on webhook payloads (X-Cld-Signature header)
+       320 +  - **SMTP Auth**: App password (16 chars), requires 2FA on sayno@pauseai.info
+       321    
+       322    ## Cost Target
+       323    
+
+     Tip: Use # to memorize shortcut to quickly add to CLAUDE.md
+
+● Update(CLAUDE.md)
+  ⎿  Updated CLAUDE.md with 4 additions and 3 removals                      
+       325    |---------|--------------|
+       326    | EC2 t3.micro (free tier 12mo) | $0 → $7 |
+       327    | EFS (30GB) | $9 |
+       328 -  | API Gateway (if webhooks) | ~$0 at our scale |
+       329 -  | Lambda (if webhooks) | ~$0 at our scale |
+       330 -  | SQS (if webhooks) | ~$0 at our scale |
+       328 +  | API Gateway | ~$0 at our scale |
+       329 +  | Lambda | ~$0 at our scale |
+       330 +  | SQS | ~$0 at our scale |
+       331 +  | Google Workspace (nonprofit) | $0 (free tier, <2000 users) |
+       332    | **Total** | **$9-16/month** |
+       333    
+       334    ## Rate Limit Analysis
+
+     Tip: Use # to memorize shortcut to quickly add to CLAUDE.md
+
+● Update(CLAUDE.md)
+  ⎿  Updated CLAUDE.md with 5 additions                                    
+       343    - Only fetches: 1 API call per approved photo to get metadata
+       344    - At 5000 photos over months: ~1 call/hour average ✅
+       345    
+       346 +  **Email sending (SMTP via Google Workspace):**
+       347 +  - Free tier limit: 2,000 emails/day per user
+       348 +  - Current need: 266 emails per collage (well under limit)
+       349 +  - No API calls, direct SMTP connection ✅
+       350 +  
+       351    **Backfill (one-time operations):**
+       352    - 142 photos × 2 API calls (pending + approved) = 284 calls
+       353    - Plus 142 metadata fetches = 426 total calls
+
+     Tip: Use # to memorize shortcut to quickly add to CLAUDE.md
+
+● Read(CLAUDE.md)
+  ⎿  Read 40 lines
+
+● Update(CLAUDE.md)
+  ⎿  Updated CLAUDE.md with 3 additions                                         
+       387    
+       388    # Grid optimizer (edit OMIT_BASE_COST, PAD_COST, CLIP_COST at top)
+       389    ./venv/bin/python3 tools/optimize_grid_v3.py
+       390 +  
+       391 +  # Test SMTP sending (local or EC2)
+       392 +  ./tools/test_smtp.py recipient@example.com
+       393    ```
+       394    
+       395    **Check EFS on EC2:**
+
+     Tip: Use # to memorize shortcut to quickly add to CLAUDE.md
+
+● Read(CLAUDE.md)
+  ⎿  Read 11 lines
+
+● Update(CLAUDE.md)
+  ⎿  Updated CLAUDE.md with 1 addition                                                          
+       433    - Session summaries: pauseai-l10n/notes/summary/
+       434    - Bootstrap summary: `20251001T00.sayno-bootstrap-collage-notification.summary.md`
+       435    - Phase 2B summary: `20251013T00.phase2b-collage-webapp.summary.md`
+       436 +  - Phase 3 SMTP summary: `20251025T13.smtp-setup.summary.md`
+       437    - FastAPI docs: https://fastapi.tiangolo.com/
+       438    - ImageMagick montage: https://imagemagick.org/script/montage.php
+       439    - Cloudinary moderation docs: https://cloudinary.com/documentation/moderate_assets
+
+     Tip: Use # to memorize shortcut to quickly add to CLAUDE.md
+
+● Bash(git diff .env.example)
+  ⎿  diff --git a/.env.example b/.env.example
+     index 3598241..2d60a81 100644
+     --- a/.env.example
+     … +10 lines (ctrl+o to expand)
+
+● Good! The .env.example was already updated earlier. Now let's commit everything:
+
+● Bash(git status && git add -A && git status)
+  ⎿  On branch main                               
+     Your branch is up to date with 'origin/main'.
+     … +19 lines (ctrl+o to expand)
+
+● Bash(git commit -m "Phase 3: SMTP setup and testing complete (#6)…)
+
+● Bash(git commit -m "Phase 3: SMTP setup and testing complete (#6)…)
+  ⎿  [main 65ecf70] Phase 3: SMTP setup and testing complete (#6)
+      3 files changed, 165 insertions(+), 6 deletions(-)
+      create mode 100755 tools/test_smtp.py
+
+● Bash(git push origin main)
+  ⎿  To github.com:PauseAI/pauseai-collagen.git
+        f0f3c53..65ecf70  main -> main
+
+● Perfect! 🎉 Session housekeeping complete!
+
+  Summary of What Was Committed & Pushed
+
+  Commit: 65ecf70 - "Phase 3: SMTP setup and testing complete (#6)"
+
+  Files changed:
+  1. ✅ tools/test_smtp.py - New SMTP test script
+  2. ✅ .env.example - Added SMTP configuration template
+  3. ✅ CLAUDE.md - Updated current status, next steps, and documentation
+  4. ✅ notes/summary/20251025T13.smtp-setup.summary.md - Session summary (not committed, only in local notes repo)
+
+  GitHub updates:
+  - ✅ Issue #6 comment: SMTP setup details and accomplishments
+  - ✅ Issue #7 comment: Brief progress note linking to #6
+  - ✅ Code pushed to main branch
+
+  Ready for next session:
+  - Social network link helpers (Open Graph meta tags)
+  - Email template design (HTML + plain text with tracking URLs)
+  - Email send script with dry-run mode
+
+  All documentation accurate, issues updated, changes committed with proper reference. Session complete! 🚀
